@@ -131,4 +131,8 @@ dependencies {
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
 
+    implementation(platform("androidx.compose:compose-bom:<latest>"))
+    implementation("androidx.compose.animation:animation")
+
+
 }

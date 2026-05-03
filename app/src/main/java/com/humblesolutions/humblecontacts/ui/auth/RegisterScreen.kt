@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -233,7 +234,7 @@ fun RegisterScreen(
                     Spacer(Modifier.height(16.dp))
 
                     // ── Phone ─────────────────────────────────────────────────
-                    FieldLabel("Phone Number")
+                    FieldLabel("Phone Number(Optional)")
                     Row(
                         modifier              = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -262,9 +263,20 @@ fun RegisterScreen(
                             leadingIcon     = Icons.Outlined.Phone,
                             keyboardType    = KeyboardType.Phone,
                             imeAction       = ImeAction.Next,
-                            modifier        = Modifier.weight(1f),
+                            isError         = uiState.phoneError != null,
+                            errorMessage    = uiState.phoneError,
+                            modifier        = Modifier
+                                .weight(1f)
+                                .onFocusChanged { focusState ->
+                                    if (!focusState.isFocused) {
+                                        viewModel.onPhoneFocusLost()
+                                    }
+                                },
                             keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                onNext = {
+                                    viewModel.onPhoneFocusLost()
+                                    focusManager.moveFocus(FocusDirection.Down)
+                                }
                             )
                         )
                     }

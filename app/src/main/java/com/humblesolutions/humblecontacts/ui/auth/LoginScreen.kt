@@ -60,6 +60,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.data.auth.GoogleSignInHelper
 import com.humblesolutions.humblecontacts.ui.theme.DarkBackground
 import com.humblesolutions.humblecontacts.ui.theme.Gold400
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -79,45 +80,28 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                // Email/Google sign-in both succeed → this event is fired → navigate away
+
                 is AuthEvent.NavigateToHome -> onLoginSuccess()
 
-                // ViewModel wants us to launch the Google picker.
-                // This runs inside a coroutine so we can call the suspend helper directly.
                 is AuthEvent.LaunchGoogleSignIn -> {
-                    // Credential Manager requires the Activity context, not just any Context.
-                    // LocalContext.current inside an Activity IS the Activity, so this cast is safe.
-                    // If for any reason it's not (e.g. inside a Dialog), the ?: return@collect
-                    // guard prevents a crash.
-                    val activity = context as? Activity ?: return@collect
+                    // ✅ Launch in a separate coroutine so the collector
+                    //    is NOT blocked and can receive NavigateToHome
+                    launch {
+                        val activity = context as? Activity ?: return@launch
+                        val helper   = GoogleSignInHelper(activity)
 
-                    val helper = GoogleSignInHelper(activity)
+                        when (val result = helper.signIn()) {
+                            is GoogleSignInHelper.GoogleSignInResult.Success ->
+                                viewModel.onGoogleIdToken(result.idToken)
 
-                    // helper.signIn() suspends here — the coroutine pauses while the
-                    // Google account picker is visible on screen. No thread blocking.
-                    when (val result = helper.signIn()) {
+                            is GoogleSignInHelper.GoogleSignInResult.Error ->
+                                viewModel.onGoogleSignInError(result.message)
 
-                        is GoogleSignInHelper.GoogleSignInResult.Success -> {
-                            // We have the idToken (a JWT from Google).
-                            // Hand it to the ViewModel which forwards it to Firebase.
-                            viewModel.onGoogleIdToken(result.idToken)
-                        }
-
-                        is GoogleSignInHelper.GoogleSignInResult.Error -> {
-                            // Something went wrong (network failure, bad config, etc.)
-                            // Show a user-readable error via the existing error banner.
-                            viewModel.onGoogleSignInError(result.message)
-                        }
-
-                        is GoogleSignInHelper.GoogleSignInResult.Cancelled -> {
-                            // User pressed back / dismissed the picker.
-                            // This is intentional — silently do nothing.
-                            // Do NOT show an error message for a deliberate dismissal.
+                            is GoogleSignInHelper.GoogleSignInResult.Cancelled -> Unit
                         }
                     }
                 }
 
-                // Events meant for other screens — ignore here
                 else -> Unit
             }
         }

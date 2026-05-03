@@ -29,6 +29,7 @@ data class AuthUiState(
     val password:        String  = "",
     val confirmPassword: String  = "",
     val phone:           String  = "",
+    val phoneTouched: Boolean = false,
     val otp:             String  = "",
 
     // OTP flow
@@ -112,8 +113,31 @@ class AuthViewModel(
             it.copy(confirmPassword = value, confirmError = confirmError)
         }
 
-    fun onPhoneChange(value: String) =
-        _uiState.update { it.copy(phone = value, phoneError = null, errorMessage = null) }
+
+
+    fun onPhoneChange(value: String) {
+        val digitsOnly = value.filter { it.isDigit() }
+        _uiState.update {
+            it.copy(
+                phone = digitsOnly.take(10),
+                phoneTouched = true,        // mark as touched on first input
+                phoneError = null,
+                errorMessage = null
+            )
+        }
+    }
+
+    fun onPhoneFocusLost() {
+        val state = _uiState.value
+        if (!state.phoneTouched) return     // never interacted, skip validation
+
+        val phoneError = when {
+            state.phone.isEmpty() -> "Phone number is required"
+            state.phone.length < 10 -> "Phone number must be 10 digits"
+            else -> null
+        }
+        _uiState.update { it.copy(phoneError = phoneError) }
+    }
 
     fun onOtpChange(value: String) =
         _uiState.update { it.copy(otp = value, otpError = null) }
