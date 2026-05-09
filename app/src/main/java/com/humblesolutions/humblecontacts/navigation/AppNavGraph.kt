@@ -53,7 +53,9 @@ private val fadeOnlyOut: ExitTransition  = fadeOut(fadeTween)
 
 @Composable
 fun AppNavGraph(
-    startDestination: String
+    startDestination: String,
+    darkMode: Boolean,
+    onDarkModeChange: (Boolean) -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -263,11 +265,30 @@ fun AppNavGraph(
             popExitTransition  = { popOut }
         ) {
             ProfileScreen(
-                onNavigateToHome     = { navController.navigate(Routes.HOME) { launchSingleTop = true } },
-                onNavigateToContacts = { navController.navigate(Routes.CONTACTS) { launchSingleTop = true } },
-                onNavigateToScan     = { navController.navigate(Routes.SCAN) },
-                onNavigateToNfc      = { navController.navigate(Routes.NFC) },
-                onLogout             = navigateToLogin   // ✅ signs out + navigates to Login
+                darkMode = darkMode,
+                onDarkModeChange = onDarkModeChange,
+
+                onNavigateToHome     = {
+                    navController.navigate(Routes.HOME) {
+                        launchSingleTop = true
+                    }
+                },
+
+                onNavigateToContacts = {
+                    navController.navigate(Routes.CONTACTS) {
+                        launchSingleTop = true
+                    }
+                },
+
+                onNavigateToScan = {
+                    navController.navigate(Routes.SCAN)
+                },
+
+                onNavigateToNfc = {
+                    navController.navigate(Routes.NFC)
+                },
+
+                onLogout = navigateToLogin
             )
         }
     }

@@ -27,13 +27,16 @@ import com.humblesolutions.humblecontacts.ui.components.NavTab
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    onNavigateToHome:    () -> Unit = {},
-    onNavigateToContacts:() -> Unit = {},
-    onNavigateToScan:    () -> Unit = {},
-    onNavigateToNfc:     () -> Unit = {},
-    onNavigateToSettings:() -> Unit = {},
-    onLogout:            () -> Unit = {}
-) {
+    darkMode: Boolean,
+    onDarkModeChange: (Boolean) -> Unit,
+
+    onNavigateToHome: () -> Unit = {},
+    onNavigateToContacts: () -> Unit = {},
+    onNavigateToScan: () -> Unit = {},
+    onNavigateToNfc: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    onLogout: () -> Unit = {}
+){
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
@@ -196,8 +199,12 @@ fun ProfileScreen(
                         iconTint = MaterialTheme.colorScheme.primary,
                         title = "Dark Mode",
                         subtitle = "Toggle dark theme",
-                        checked = false,
-                        onCheckedChange = {}
+
+                        checked = darkMode,
+
+                        onCheckedChange = {
+                            onDarkModeChange(it)
+                        }
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsToggleRow(
