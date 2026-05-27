@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -20,6 +21,9 @@ import androidx.navigation.navArgument
 import com.google.firebase.auth.FirebaseAuth
 import com.humblesolutions.humblecontacts.ui.auth.AuthViewModel
 import com.humblesolutions.humblecontacts.ui.auth.LoginScreen
+import com.humblesolutions.humblecontacts.ui.auth.OtpVerifyScreen
+import com.humblesolutions.humblecontacts.ui.auth.PhoneAuthViewModel
+import com.humblesolutions.humblecontacts.ui.auth.PhoneInputScreen
 import com.humblesolutions.humblecontacts.ui.auth.RegisterScreen
 import com.humblesolutions.humblecontacts.ui.contacts.AddContactScreen
 import com.humblesolutions.humblecontacts.ui.contacts.ContactDetailScreen
@@ -60,7 +64,6 @@ fun AppNavGraph(
     val navController = rememberNavController()
 
     // ── Single source of truth for "go to Home after auth" ───────────────────
-    // Used by both Login and Register so there's no duplication
     val navigateToHome: () -> Unit = {
         navController.navigate(Routes.HOME) {
             popUpTo(0) { inclusive = true }
@@ -90,7 +93,10 @@ fun AppNavGraph(
         composable(route = Routes.SPLASH) {
             AnimatedSplashScreen(
                 onNavigate = {
-                    navController.navigate(Routes.INTRO) {
+                    val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
+                    val destination = if (isLoggedIn) Routes.HOME else Routes.INTRO
+
+                    navController.navigate(destination) {
                         popUpTo(Routes.SPLASH) { inclusive = true }
                     }
                 }
@@ -131,7 +137,10 @@ fun AppNavGraph(
                 onNavigateToRegister = {
                     navController.navigate(Routes.REGISTER) { launchSingleTop = true }
                 },
-                onLoginSuccess = navigateToHome   // ✅ directly navigates, no lambda indirection
+                onNavigateToPhone    = {
+                    navController.navigate(Routes.PHONE_INPUT) { launchSingleTop = true }
+                },
+                onLoginSuccess       = navigateToHome
             )
         }
 
@@ -150,7 +159,65 @@ fun AppNavGraph(
             RegisterScreen(
                 viewModel         = registerViewModel,
                 onNavigateToLogin = { navController.popBackStack() },
-                onRegisterSuccess = navigateToHome   // ✅ same navigateToHome
+                onNavigateToPhone = {
+                    navController.navigate(Routes.PHONE_INPUT) {
+                        launchSingleTop = true
+                    }
+                },
+                onRegisterSuccess = navigateToHome
+            )
+        }
+
+        // ── Phone Input ───────────────────────────────────────────────────────
+        // PhoneAuthViewModel is scoped to this entry so OtpVerifyScreen can
+        // retrieve the same instance (it holds the verificationId from Firebase).
+        composable(
+            route              = Routes.PHONE_INPUT,
+            enterTransition    = { slideIn },
+            exitTransition     = { slideOut },
+            popEnterTransition = { popIn },
+            popExitTransition  = { popOut }
+        ) { backStackEntry ->
+            val phoneAuthViewModel: PhoneAuthViewModel = viewModel(
+                viewModelStoreOwner = backStackEntry
+            )
+            PhoneInputScreen(
+                viewModel = phoneAuthViewModel,
+                onBack    = { navController.popBackStack() },
+                onOtpSent = {
+                    navController.navigate(Routes.OTP_VERIFY) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        // ── OTP Verify ────────────────────────────────────────────────────────
+        // Shares the PhoneAuthViewModel scoped to the PHONE_INPUT entry above.
+        composable(
+            route = Routes.OTP_VERIFY,
+            enterTransition = { slideIn },
+            exitTransition = { slideOut },
+            popEnterTransition = { popIn },
+            popExitTransition = { popOut }
+        ) {
+
+            val parentEntry = remember(it) {
+                navController.getBackStackEntry(Routes.PHONE_INPUT)
+            }
+
+            val phoneAuthViewModel: PhoneAuthViewModel = viewModel(
+                viewModelStoreOwner = parentEntry
+            )
+
+            OtpVerifyScreen(
+                viewModel = phoneAuthViewModel,   // same shared instance
+                onBack    = { navController.popBackStack() },
+                onSuccess = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -265,30 +332,21 @@ fun AppNavGraph(
             popExitTransition  = { popOut }
         ) {
             ProfileScreen(
-                darkMode = darkMode,
+                darkMode         = darkMode,
                 onDarkModeChange = onDarkModeChange,
-
-                onNavigateToHome     = {
-                    navController.navigate(Routes.HOME) {
-                        launchSingleTop = true
-                    }
+                onNavigateToHome = {
+                    navController.navigate(Routes.HOME) { launchSingleTop = true }
                 },
-
                 onNavigateToContacts = {
-                    navController.navigate(Routes.CONTACTS) {
-                        launchSingleTop = true
-                    }
+                    navController.navigate(Routes.CONTACTS) { launchSingleTop = true }
                 },
-
                 onNavigateToScan = {
                     navController.navigate(Routes.SCAN)
                 },
-
-                onNavigateToNfc = {
+                onNavigateToNfc  = {
                     navController.navigate(Routes.NFC)
                 },
-
-                onLogout = navigateToLogin
+                onLogout         = navigateToLogin
             )
         }
     }

@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.data.auth.GoogleSignInHelper
+import com.humblesolutions.humblecontacts.navigation.Routes
 import com.humblesolutions.humblecontacts.ui.theme.DarkBackground
 import com.humblesolutions.humblecontacts.ui.theme.DarkSurfaceVariant
 import com.humblesolutions.humblecontacts.ui.theme.Gold400
@@ -72,12 +74,13 @@ import com.humblesolutions.humblecontacts.ui.theme.TextOnNavy
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
+    onNavigateToPhone: () -> Unit,
     onRegisterSuccess: () -> Unit,
     viewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory())
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
-    val dark = MaterialTheme.colorScheme.background == DarkBackground
+    val dark = isSystemInDarkTheme()
     var termsAccepted by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -416,6 +419,8 @@ fun RegisterScreen(
 
                     Spacer(Modifier.height(16.dp))
 
+
+
                     // ── Social buttons ────────────────────────────────────────
                     Row(
                         modifier              = Modifier.fillMaxWidth(),
@@ -445,9 +450,15 @@ fun RegisterScreen(
                             modifier = Modifier.weight(1f)
                         )
                         SocialButton(
-                            text     = "Facebook",
-                            icon     = { FacebookIcon() },
-                            onClick  = { /* TODO: Facebook Sign-In */ },
+                            text     = "Phone Number",
+                            icon     = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Phone,
+                                    contentDescription = "Phone",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            onClick  = onNavigateToPhone,
                             modifier = Modifier.weight(1f)
                         )
                     }

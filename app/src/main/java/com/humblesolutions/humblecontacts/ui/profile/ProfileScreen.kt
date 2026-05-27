@@ -22,21 +22,18 @@ import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
 
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     darkMode: Boolean,
     onDarkModeChange: (Boolean) -> Unit,
-
     onNavigateToHome: () -> Unit = {},
     onNavigateToContacts: () -> Unit = {},
     onNavigateToScan: () -> Unit = {},
     onNavigateToNfc: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onLogout: () -> Unit = {}
-){
+) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
@@ -104,7 +101,6 @@ fun ProfileScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Stats row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
@@ -126,35 +122,34 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // ── Settings sections ────────────────────────────────────────────
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
 
                 SettingsSection(title = "ACCOUNT") {
                     SettingsRow(
-                        icon = Icons.Outlined.Person,
-                        iconBg = MaterialTheme.colorScheme.primaryContainer,
+                        icon     = Icons.Outlined.Person,
+                        iconBg   = MaterialTheme.colorScheme.primaryContainer,
                         iconTint = MaterialTheme.colorScheme.primary,
-                        title = "Edit Profile",
+                        title    = "Edit Profile",
                         subtitle = "Update your information",
-                        onClick = {}
+                        onClick  = {}
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsRow(
-                        icon = Icons.Outlined.Lock,
-                        iconBg = MaterialTheme.colorScheme.primaryContainer,
+                        icon     = Icons.Outlined.Lock,
+                        iconBg   = MaterialTheme.colorScheme.primaryContainer,
                         iconTint = MaterialTheme.colorScheme.primary,
-                        title = "Change Password",
+                        title    = "Change Password",
                         subtitle = "Update your password",
-                        onClick = {}
+                        onClick  = {}
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsRow(
-                        icon = Icons.Outlined.Link,
-                        iconBg = MaterialTheme.colorScheme.primaryContainer,
+                        icon     = Icons.Outlined.Link,
+                        iconBg   = MaterialTheme.colorScheme.primaryContainer,
                         iconTint = MaterialTheme.colorScheme.primary,
-                        title = "Linked Accounts",
+                        title    = "Linked Accounts",
                         subtitle = "Google, LinkedIn",
-                        onClick = {}
+                        onClick  = {}
                     )
                 }
 
@@ -162,78 +157,76 @@ fun ProfileScreen(
 
                 SettingsSection(title = "PRIVACY & DATA") {
                     SettingsRow(
-                        icon = Icons.Outlined.Shield,
-                        iconBg = MaterialTheme.colorScheme.primaryContainer,
+                        icon     = Icons.Outlined.Shield,
+                        iconBg   = MaterialTheme.colorScheme.primaryContainer,
                         iconTint = MaterialTheme.colorScheme.primary,
-                        title = "Data Visibility",
+                        title    = "Data Visibility",
                         subtitle = "Control who sees your data",
-                        onClick = {}
+                        onClick  = {}
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsRow(
-                        icon = Icons.Outlined.Download,
-                        iconBg = MaterialTheme.colorScheme.secondaryContainer,
+                        icon     = Icons.Outlined.Download,
+                        iconBg   = MaterialTheme.colorScheme.secondaryContainer,
                         iconTint = MaterialTheme.colorScheme.secondary,
-                        title = "Export Data",
+                        title    = "Export Data",
                         subtitle = "Download all contacts as CSV",
-                        onClick = {}
+                        onClick  = {}
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsRow(
-                        icon = Icons.Outlined.Delete,
-                        iconBg = MaterialTheme.colorScheme.errorContainer,
-                        iconTint = MaterialTheme.colorScheme.error,
-                        title = "Delete Account",
-                        subtitle = "Permanently remove your account",
+                        icon       = Icons.Outlined.Delete,
+                        iconBg     = MaterialTheme.colorScheme.errorContainer,
+                        iconTint   = MaterialTheme.colorScheme.error,
+                        title      = "Delete Account",
+                        subtitle   = "Permanently remove your account",
                         titleColor = MaterialTheme.colorScheme.error,
-                        onClick = {}
+                        onClick    = {}
                     )
                 }
 
                 Spacer(Modifier.height(16.dp))
 
                 SettingsSection(title = "APP SETTINGS") {
+                    // ✅ Fixed: pass ProfileScreen's darkMode and onDarkModeChange directly
                     SettingsToggleRow(
-                        icon = Icons.Outlined.DarkMode,
-                        iconBg = MaterialTheme.colorScheme.primaryContainer,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = "Dark Mode",
-                        subtitle = "Toggle dark theme",
-
-                        checked = darkMode,
-
-                        onCheckedChange = {
-                            onDarkModeChange(it)
-                        }
+                        icon            = Icons.Outlined.DarkMode,
+                        iconBg          = MaterialTheme.colorScheme.primaryContainer,
+                        iconTint        = MaterialTheme.colorScheme.primary,
+                        title           = "Dark Mode",
+                        subtitle        = "Toggle dark theme",
+                        checked         = darkMode,
+                        onCheckedChange = onDarkModeChange
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsToggleRow(
-                        icon = Icons.Outlined.Notifications,
-                        iconBg = MaterialTheme.colorScheme.primaryContainer,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = "Notifications",
-                        subtitle = "Follow-up reminders",
-                        checked = true,
+                        icon            = Icons.Outlined.Notifications,
+                        iconBg          = MaterialTheme.colorScheme.primaryContainer,
+                        iconTint        = MaterialTheme.colorScheme.primary,
+                        title           = "Notifications",
+                        subtitle        = "Follow-up reminders",
+                        checked         = true,
                         onCheckedChange = {}
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsRow(
-                        icon = Icons.Outlined.Help,
-                        iconBg = MaterialTheme.colorScheme.primaryContainer,
+                        icon     = Icons.Outlined.Help,
+                        iconBg   = MaterialTheme.colorScheme.primaryContainer,
                         iconTint = MaterialTheme.colorScheme.primary,
-                        title = "Help & Support",
+                        title    = "Help & Support",
                         subtitle = "FAQs and contact support",
-                        onClick = {}
+                        onClick  = {}
                     )
                 }
 
                 Spacer(Modifier.height(16.dp))
 
-                // Logout button
                 OutlinedButton(
-                    onClick = onLogout,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    onClick  = onLogout,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape  = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     ),
@@ -262,17 +255,17 @@ private fun SettingsSection(
 ) {
     Text(
         title,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontSize     = 12.sp,
+        fontWeight   = FontWeight.SemiBold,
+        color        = MaterialTheme.colorScheme.onSurfaceVariant,
         letterSpacing = 0.8.sp
     )
     Spacer(Modifier.height(8.dp))
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
+        modifier        = Modifier.fillMaxWidth(),
+        shape           = RoundedCornerShape(16.dp),
+        color           = MaterialTheme.colorScheme.surface,
+        tonalElevation  = 1.dp,
         shadowElevation = 2.dp
     ) {
         Column { content() }
@@ -316,7 +309,7 @@ private fun SettingsRow(
         Icon(
             Icons.Outlined.ChevronRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint     = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(18.dp)
         )
     }
@@ -335,8 +328,8 @@ private fun SettingsToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    var state by remember { mutableStateOf(checked) }
-
+    // ✅ Fixed: removed local `var state` — use `checked` prop directly so the
+    //    switch always reflects the real source of truth (MainActivity's darkMode state)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -358,8 +351,8 @@ private fun SettingsToggleRow(
             Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(
-            checked = state,
-            onCheckedChange = { state = it; onCheckedChange(it) },
+            checked         = checked,
+            onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor   = MaterialTheme.colorScheme.onPrimary,
                 checkedTrackColor   = MaterialTheme.colorScheme.primary,
@@ -379,14 +372,14 @@ private fun ProfileStat(value: String, label: String) {
         Text(
             value,
             fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            color = MaterialTheme.colorScheme.onSurface
+            fontSize   = 20.sp,
+            color      = MaterialTheme.colorScheme.onSurface
         )
         Spacer(Modifier.height(2.dp))
         Text(
             label,
             fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color    = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

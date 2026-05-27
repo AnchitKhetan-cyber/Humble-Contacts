@@ -1,14 +1,10 @@
 package com.humblesolutions.humblecontacts.ui.auth
 
 import android.app.Activity
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Card
@@ -58,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.data.auth.GoogleSignInHelper
-import com.humblesolutions.humblecontacts.ui.theme.DarkBackground
 import com.humblesolutions.humblecontacts.ui.theme.Gold400
 import kotlinx.coroutines.launch
 
@@ -66,12 +62,16 @@ import kotlinx.coroutines.launch
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onLoginSuccess: () -> Unit,
-    viewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory())
+    viewModel: AuthViewModel = viewModel(factory = AuthViewModel.Factory()),
+    onNavigateToPhone: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
-    val dark = MaterialTheme.colorScheme.background == DarkBackground
+
+    // Reads the device's current theme setting (light or dark).
+    // Automatically recomposes if the user toggles the system theme while the screen is visible.
+    val dark = isSystemInDarkTheme()
 
     // ── One-shot event collector ───────────────────────────────────────────────
     // LaunchedEffect(Unit) runs once when this composable enters the composition.
@@ -127,7 +127,7 @@ fun LoginScreen(
                 .offset(x = 70.dp, y = (-70).dp)
                 .align(Alignment.TopEnd)
                 .clip(RoundedCornerShape(50))
-                .background(Gold400.copy(alpha = 0.05f))
+                .background(Gold400.copy(alpha = if (dark) 0.08f else 0.05f))
         )
 
         // ── Scrollable content ─────────────────────────────────────────────────
@@ -321,11 +321,17 @@ fun LoginScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // ── Facebook Sign-In button ────────────────────────────
                         SocialButton(
-                            text     = "Facebook",
-                            icon     = { FacebookIcon() },
-                            onClick  = { /* TODO: Facebook Sign-In */ },
+                            text = "Phone Number",
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Phone,
+                                    contentDescription = "Phone Login",
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = onNavigateToPhone,
                             modifier = Modifier.weight(1f)
                         )
                     }
