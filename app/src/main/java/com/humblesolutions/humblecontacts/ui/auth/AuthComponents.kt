@@ -282,7 +282,7 @@ fun SocialButton(
         contentPadding =
             PaddingValues(
                 vertical = 12.dp,
-                horizontal = 16.dp
+                horizontal = 8.dp
             ),
 
         modifier =
