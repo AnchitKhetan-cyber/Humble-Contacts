@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "478584687226-nkjq6lhesrfujeo93rbpctef4rnomh71.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.humblesolutions.humblecontacts",
+            "certificate_hash": "610b9e6ecd302411affe96b0db83eb6eab8539ab"
+          }
+        },
+        {
           "client_id": "478584687226-l7n3gm2g79a472tqspeto8vga531omip.apps.googleusercontent.com",
           "client_type": 3
         }

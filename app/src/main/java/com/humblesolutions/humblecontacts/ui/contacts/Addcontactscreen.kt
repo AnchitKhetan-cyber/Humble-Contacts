@@ -1,5 +1,8 @@
 package com.humblesolutions.humblecontacts.ui.contacts
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,6 +36,50 @@ fun AddContactScreen(
     var phone     by remember { mutableStateOf("") }
     var linkedIn  by remember { mutableStateOf("") }
     var notes     by remember { mutableStateOf("") }
+
+    var extractedContact by remember {
+        mutableStateOf(ContactInfo())
+    }
+
+    LaunchedEffect(extractedContact) {
+        fullName = extractedContact.name
+        jobRole = extractedContact.designation
+        company = extractedContact.company
+        email = extractedContact.email
+        phone = extractedContact.phone
+        linkedIn = extractedContact.linkedin
+    }
+
+    var imageUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+
+    val context = LocalContext.current
+
+    val cameraLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.TakePicturePreview()
+        ) { bitmap ->
+
+            bitmap?.let {
+
+                val uri = saveBitmapAndReturnUri(
+                    context,
+                    it
+                )
+
+                imageUri = uri
+            }
+        }
+
+    val galleryLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent()
+        ) { uri ->
+
+            imageUri = uri
+        }
+
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -114,7 +162,9 @@ fun AddContactScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedButton(
-                        onClick = {},
+                        onClick = {
+                            cameraLauncher.launch(null)
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp)
                     ) {
@@ -123,7 +173,9 @@ fun AddContactScreen(
                         Text("Camera")
                     }
                     OutlinedButton(
-                        onClick = {},
+                        onClick = {
+                            galleryLauncher.launch("image/*")
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp)
                     ) {
@@ -136,7 +188,20 @@ fun AddContactScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Button(
-                    onClick = {},
+                    onClick = {
+
+                        imageUri?.let { uri ->
+
+                            processImage(
+                                context = context,
+                                imageUri = uri
+                            ) { text ->
+
+                                extractedContact =
+                                    BusinessCardParser.parse(text)
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
