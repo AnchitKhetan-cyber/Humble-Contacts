@@ -19,6 +19,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.provider.ContactsContract
 
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -282,7 +284,44 @@ fun AddContactScreen(
 
             // ── Save button ──────────────────────────────────────────────────
             Button(
-                onClick = onSave,
+                onClick = {
+
+                    val intent = Intent(
+                        ContactsContract.Intents.Insert.ACTION
+                    ).apply {
+
+                        type = ContactsContract.RawContacts.CONTENT_TYPE
+
+                        putExtra(
+                            ContactsContract.Intents.Insert.NAME,
+                            fullName
+                        )
+
+                        putExtra(
+                            ContactsContract.Intents.Insert.PHONE,
+                            phone
+                        )
+
+                        putExtra(
+                            ContactsContract.Intents.Insert.EMAIL,
+                            email
+                        )
+
+                        putExtra(
+                            ContactsContract.Intents.Insert.COMPANY,
+                            company
+                        )
+
+                        putExtra(
+                            ContactsContract.Intents.Insert.JOB_TITLE,
+                            jobRole
+                        )
+                    }
+
+                    context.startActivity(intent)
+
+                    onSave()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -292,7 +331,7 @@ fun AddContactScreen(
                 )
             ) {
                 Text(
-                    "Save Contact",
+                    "Save",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
