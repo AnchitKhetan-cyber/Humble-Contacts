@@ -1,6 +1,8 @@
 package com.humblesolutions.humblecontacts.ui.contacts
 
+import android.content.Intent
 import android.net.Uri
+import android.provider.ContactsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -19,8 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.content.Intent
-import android.provider.ContactsContract
+import coil.compose.AsyncImage
 
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -129,31 +130,47 @@ fun AddContactScreen(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                     )
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Outlined.CameraAlt,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(36.dp)
+                    if (imageUri != null) {
+
+                        AsyncImage(
+                            model = imageUri,
+                            contentDescription = "Business Card",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
                         )
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            "Scan Business Card",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Take a photo or upload from gallery",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+
+                    } else {
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Outlined.CameraAlt,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            )
+
+                            Spacer(Modifier.height(10.dp))
+
+                            Text(
+                                "Scan Business Card",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp
+                            )
+
+                            Spacer(Modifier.height(4.dp))
+
+                            Text(
+                                "Take a photo or upload from gallery",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
@@ -331,7 +348,7 @@ fun AddContactScreen(
                 )
             ) {
                 Text(
-                    "Save",
+                    "Save Contact",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
