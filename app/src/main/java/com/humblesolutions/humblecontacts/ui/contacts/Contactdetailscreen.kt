@@ -15,11 +15,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.net.Uri
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.firestore
+import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
+import kotlinx.coroutines.tasks.await
 
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -27,16 +35,35 @@ import com.humblesolutions.humblecontacts.ui.components.NavTab
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactDetailScreen(
-    contactId:           String = "1",
-    onBack:              () -> Unit = {},
-    onNavigateToHome:    () -> Unit = {},
-    onNavigateToContacts:() -> Unit = {},
-    onNavigateToScan:    () -> Unit = {},
-    onNavigateToNfc:     () -> Unit = {},
-    onNavigateToProfile: () -> Unit = {}
+    contactId:            String = "",
+    onBack:               () -> Unit = {},
+    onNavigateToHome:     () -> Unit = {},
+    onNavigateToContacts: () -> Unit = {},
+    onNavigateToScan:     () -> Unit = {},
+    onNavigateToNfc:      () -> Unit = {},
+    onNavigateToProfile:  () -> Unit = {}
 ) {
+    // ── Load the real contact from Firestore ──────────────────────────────────
+    var contact by remember { mutableStateOf<Contact?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(contactId) {
+        if (contactId.isNotBlank()) {
+            try {
+                val doc = Firebase.firestore
+                    .collection("contacts")
+                    .document(contactId)
+                    .get()
+                    .await()
+                contact = doc.toObject(Contact::class.java)
+            } catch (_: Exception) { }
+        }
+        isLoading = false
+    }
+
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Overview", "Notes", "Media")
+    val context = LocalContext.current
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -55,6 +82,26 @@ fun ContactDetailScreen(
             )
         }
     ) { padding ->
+
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
+
+        val c = contact
+        if (c == null) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Contact not found", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(12.dp))
+                    TextButton(onClick = onBack) { Text("Go back") }
+                }
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -69,7 +116,6 @@ fun ContactDetailScreen(
                     .height(160.dp)
                     .background(MaterialTheme.colorScheme.primary)
             ) {
-                // Back button
                 IconButton(
                     onClick = onBack,
                     modifier = Modifier
@@ -89,7 +135,7 @@ fun ContactDetailScreen(
                     }
                 }
 
-                // Avatar — straddling the header/body seam
+                // Avatar straddling header/body seam
                 Box(
                     modifier = Modifier
                         .size(88.dp)
@@ -100,7 +146,7 @@ fun ContactDetailScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "SC",
+                        c.initials,
                         fontWeight = FontWeight.Bold,
                         fontSize = 28.sp,
                         color = MaterialTheme.colorScheme.primary
@@ -108,7 +154,6 @@ fun ContactDetailScreen(
                 }
             }
 
-            // Space for avatar overflow
             Spacer(Modifier.height(52.dp))
 
             // ── Name & Title ─────────────────────────────────────────────────
@@ -117,16 +162,30 @@ fun ContactDetailScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "Sarah Chen",
+                    c.fullName,
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    "Product Designer • Figma",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                val subtitle = listOf(c.jobRole, c.company).filter { it.isNotBlank() }.joinToString(" • ")
+                if (subtitle.isNotBlank()) {
+                    Text(subtitle, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (c.industry.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            c.industry,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(20.dp))
@@ -138,30 +197,42 @@ fun ContactDetailScreen(
                     .padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ActionButton(
-                    icon = Icons.Outlined.Call,
-                    label = "Call",
-                    isPrimary = true,
-                    modifier = Modifier.weight(1f)
-                )
-                ActionButton(
-                    icon = Icons.Outlined.Email,
-                    label = "Email",
-                    isPrimary = false,
-                    modifier = Modifier.weight(1f)
-                )
-                ActionButton(
-                    icon = Icons.Outlined.Person,
-                    label = "LinkedIn",
-                    isPrimary = false,
-                    modifier = Modifier.weight(1f)
-                )
-                ActionButton(
-                    icon = Icons.Outlined.Chat,
-                    label = "Chat",
-                    isPrimary = false,
-                    modifier = Modifier.weight(1f)
-                )
+                if (c.phone.isNotBlank()) {
+                    ActionButton(
+                        icon = Icons.Outlined.Call,
+                        label = "Call",
+                        isPrimary = true,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${c.phone}"))
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+                if (c.email.isNotBlank()) {
+                    ActionButton(
+                        icon = Icons.Outlined.Email,
+                        label = "Email",
+                        isPrimary = false,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${c.email}"))
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+                if (c.phone.isNotBlank()) {
+                    ActionButton(
+                        icon = Icons.Outlined.Chat,
+                        label = "Chat",
+                        isPrimary = false,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("sms:${c.phone}"))
+                            context.startActivity(intent)
+                        }
+                    )
+                }
             }
 
             Spacer(Modifier.height(20.dp))
@@ -201,10 +272,9 @@ fun ContactDetailScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // ── Tab Content ──────────────────────────────────────────────────
             when (selectedTab) {
-                0 -> OverviewTab()
-                1 -> NotesTab()
+                0 -> OverviewTab(contact = c)
+                1 -> NotesTab(notes = c.conversationNotes, eventName = c.eventName, metOn = c.metOn)
                 2 -> MediaTab()
             }
 
@@ -214,10 +284,10 @@ fun ContactDetailScreen(
 }
 
 
-// ─── Overview Tab ─────────────────────────────────────────────────────────────
+// ─── Overview Tab — real data ─────────────────────────────────────────────────
 
 @Composable
-private fun OverviewTab() {
+private fun OverviewTab(contact: Contact) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
 
         // Contact info card
@@ -228,54 +298,106 @@ private fun OverviewTab() {
             shadowElevation = 2.dp
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                InfoRow("Phone",    "+1 (555) 123-4567", isLink = false)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                InfoRow("Email",    "sarah.chen@figma.com", isLink = false)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                InfoRow("LinkedIn", "View Profile", isLink = true)
+                if (contact.phone.isNotBlank()) {
+                    InfoRow("Phone", contact.phone, isLink = false)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                if (contact.email.isNotBlank()) {
+                    InfoRow("Email", contact.email, isLink = false)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                if (contact.company.isNotBlank()) {
+                    InfoRow("Company", contact.company, isLink = false)
+                }
+                if (contact.phone.isBlank() && contact.email.isBlank() && contact.company.isBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No contact info available", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        // First meeting card
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 1.dp,
-            shadowElevation = 2.dp
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "First Meeting Details",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.LocationOn,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
+        // Meeting details card
+        if (contact.eventName.isNotBlank() || contact.meetingLocation.isNotBlank() || contact.metOn.isNotBlank()) {
+            Spacer(Modifier.height(16.dp))
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 1.dp,
+                shadowElevation = 2.dp
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "First Meeting Details",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Column {
-                        Text("TechCrunch Disrupt", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("AI & Design Panel", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
+                    if (contact.eventName.isNotBlank() || contact.meetingLocation.isNotBlank()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Outlined.LocationOn,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                if (contact.eventName.isNotBlank())
+                                    Text(contact.eventName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                                if (contact.meetingLocation.isNotBlank())
+                                    Text(contact.meetingLocation, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    if (contact.metOn.isNotBlank()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Outlined.CalendarMonth,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(contact.metOn, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                        }
                     }
                 }
-                Spacer(Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.CalendarMonth,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("March 15, 2026", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
+
+        // Tags
+        if (contact.tags.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 1.dp,
+                shadowElevation = 2.dp
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Tags", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(Modifier.height(10.dp))
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        contact.tags.forEach { tag ->
+                            Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                                Text(
+                                    tag,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -301,13 +423,11 @@ private fun InfoRow(label: String, value: String, isLink: Boolean) {
 }
 
 
-// ─── Notes Tab ────────────────────────────────────────────────────────────────
+// ─── Notes Tab — real data ────────────────────────────────────────────────────
 
 @Composable
-private fun NotesTab() {
+private fun NotesTab(notes: String, eventName: String, metOn: String) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-
-        // Note card
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -315,50 +435,59 @@ private fun NotesTab() {
             shadowElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(9.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Outlined.CalendarMonth,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
+                if (eventName.isNotBlank() || metOn.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(9.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Outlined.CalendarMonth,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column {
+                            if (eventName.isNotBlank())
+                                Text(eventName, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                            if (metOn.isNotBlank())
+                                Text(metOn, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text("TechCrunch Disrupt", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Mar 15, 2026", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    Spacer(Modifier.height(12.dp))
                 }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "Discussed collaboration on design systems. Very interested in our AI features. Follow up in 2 weeks.",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
-                )
+                if (notes.isNotBlank()) {
+                    Text(
+                        notes,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 20.sp
+                    )
+                } else {
+                    Text(
+                        "No notes added for this contact.",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
         Spacer(Modifier.height(12.dp))
 
-        // Add note button
         OutlinedButton(
             onClick = {},
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ),
-            border = ButtonDefaults.outlinedButtonBorder
         ) {
-            Text("Add New Note", modifier = Modifier.padding(vertical = 4.dp), fontSize = 15.sp)
+            Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Add Note")
         }
     }
 }
@@ -368,32 +497,22 @@ private fun NotesTab() {
 
 @Composable
 private fun MediaTab() {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 20.dp, vertical = 32.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Spacer(Modifier.height(32.dp))
-        Icon(
-            Icons.Outlined.PermMedia,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(48.dp)
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            "No media yet",
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Photos and files shared with this contact will appear here.",
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Outlined.Image,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(Modifier.height(12.dp))
+            Text("No media yet", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp)
+        }
     }
 }
 
@@ -405,15 +524,15 @@ private fun ActionButton(
     icon: ImageVector,
     label: String,
     isPrimary: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         color = if (isPrimary) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.surface,
-        tonalElevation = if (isPrimary) 0.dp else 1.dp,
-        shadowElevation = 2.dp
+        else MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = if (isPrimary) 0.dp else 1.dp
     ) {
         Column(
             modifier = Modifier.padding(vertical = 12.dp),
@@ -423,7 +542,7 @@ private fun ActionButton(
                 icon,
                 contentDescription = label,
                 tint = if (isPrimary) MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.onSurface,
+                else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.height(4.dp))
@@ -431,7 +550,7 @@ private fun ActionButton(
                 label,
                 fontSize = 11.sp,
                 color = if (isPrimary) MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

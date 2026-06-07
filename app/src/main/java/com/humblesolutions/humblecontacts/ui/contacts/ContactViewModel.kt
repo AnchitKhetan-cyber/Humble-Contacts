@@ -63,4 +63,26 @@ class ContactViewModel : ViewModel() {
             repo.addContact(contact)
         }
     }
+
+    fun filtered(
+        searchQuery: String,
+        selectedFilter: String
+    ): List<Contact> {
+
+        return contacts.filter { contact ->
+
+            val matchesSearch =
+                searchQuery.isBlank() ||
+                        contact.fullName.contains(searchQuery, ignoreCase = true) ||
+                        contact.company.contains(searchQuery, ignoreCase = true) ||
+                        contact.jobRole.contains(searchQuery, ignoreCase = true)
+
+            val matchesFilter = when (selectedFilter) {
+                "All" -> true
+                else -> true
+            }
+
+            matchesSearch && matchesFilter
+        }
+    }
 }

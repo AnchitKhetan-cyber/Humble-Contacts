@@ -18,8 +18,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import com.humblesolutions.humblecontacts.ui.home.HomeViewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
 
@@ -37,6 +39,7 @@ fun ProfileScreen(
     onLogout: () -> Unit = {}
 ) {
 
+    val viewModel: HomeViewModel = viewModel()
     val user = FirebaseAuth.getInstance().currentUser
 
     val displayName = user?.displayName ?: "User"
@@ -135,17 +138,17 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        ProfileStat(value = "247", label = "Contacts")
+                        ProfileStat(value = viewModel.totalContacts.toString(), label = "Contacts")
                         VerticalDivider(
                             modifier = Modifier.height(32.dp),
                             color = MaterialTheme.colorScheme.outlineVariant
                         )
-                        ProfileStat(value = "18", label = "Follow-ups")
+                        ProfileStat(value = viewModel.thisMonthCount.toString(), label = "This Month")
                         VerticalDivider(
                             modifier = Modifier.height(32.dp),
                             color = MaterialTheme.colorScheme.outlineVariant
                         )
-                        ProfileStat(value = "8", label = "Events")
+                        ProfileStat(value = viewModel.uniqueEventsCount.toString(), label = "Events")
                     }
                 }
             }

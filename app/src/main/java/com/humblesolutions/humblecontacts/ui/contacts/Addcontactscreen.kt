@@ -1,8 +1,6 @@
 package com.humblesolutions.humblecontacts.ui.contacts
 
-import android.content.Intent
 import android.net.Uri
-import android.provider.ContactsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -21,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 
 
@@ -32,13 +31,20 @@ fun AddContactScreen(
     onBack:    () -> Unit = {},
     onSave:    () -> Unit = {}
 ) {
+    val viewModel: ContactViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+
     var fullName  by remember { mutableStateOf("") }
     var jobRole   by remember { mutableStateOf("") }
     var company   by remember { mutableStateOf("") }
+    var industry  by remember { mutableStateOf("") }
     var email     by remember { mutableStateOf("") }
     var phone     by remember { mutableStateOf("") }
     var linkedIn  by remember { mutableStateOf("") }
     var notes     by remember { mutableStateOf("") }
+    var eventName by remember { mutableStateOf("") }
+    var location  by remember { mutableStateOf("") }
+    var nameError by remember { mutableStateOf(false) }
+    var isSaving  by remember { mutableStateOf(false) }
 
     var extractedContact by remember {
         mutableStateOf(ContactInfo())
@@ -240,7 +246,10 @@ fun AddContactScreen(
 
             // ── Basic Details ────────────────────────────────────────────────
             SectionCard(title = "Basic Details") {
-                ContactTextField(value = fullName,  onValueChange = { fullName  = it }, label = "Full Name *",  placeholder = "John Doe")
+                ContactTextField(value = fullName,  onValueChange = { fullName  = it; nameError = false }, label = "Full Name *",  placeholder = "John Doe")
+                if (nameError) {
+                    Text("Name is required", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = androidx.compose.ui.Modifier.padding(start = 4.dp, top = 2.dp))
+                }
                 Spacer(Modifier.height(12.dp))
                 ContactTextField(value = jobRole,   onValueChange = { jobRole   = it }, label = "Job Role",     placeholder = "Product Designer")
                 Spacer(Modifier.height(12.dp))
@@ -302,41 +311,20 @@ fun AddContactScreen(
             // ── Save button ──────────────────────────────────────────────────
             Button(
                 onClick = {
-
-                    val intent = Intent(
-                        ContactsContract.Intents.Insert.ACTION
-                    ).apply {
-
-                        type = ContactsContract.RawContacts.CONTENT_TYPE
-
-                        putExtra(
-                            ContactsContract.Intents.Insert.NAME,
-                            fullName
-                        )
-
-                        putExtra(
-                            ContactsContract.Intents.Insert.PHONE,
-                            phone
-                        )
-
-                        putExtra(
-                            ContactsContract.Intents.Insert.EMAIL,
-                            email
-                        )
-
-                        putExtra(
-                            ContactsContract.Intents.Insert.COMPANY,
-                            company
-                        )
-
-                        putExtra(
-                            ContactsContract.Intents.Insert.JOB_TITLE,
-                            jobRole
-                        )
+                    if (fullName.isBlank()) {
+                        nameError = true
+                        return@Button
                     }
-
-                    context.startActivity(intent)
-
+                    nameError = false
+                    isSaving = true
+                    viewModel.addContact(
+                        fullName = fullName.trim(),
+                        jobRole  = jobRole.trim(),
+                        company  = company.trim(),
+                        email    = email.trim(),
+                        phone    = phone.trim(),
+                        notes    = notes.trim()
+                    )
                     onSave()
                 },
                 modifier = Modifier

@@ -38,4 +38,10 @@ class ContactRepository {
     suspend fun deleteContact(contactId: String) {
         db.collection("contacts").document(contactId).delete().await()
     }
+
+    suspend fun updateContact(contact: Contact) {
+        db.collection("contacts").document(contact.contactId)
+            .set(contact.copy(updatedAt = com.google.firebase.Timestamp.now()))
+            .await()
+    }
 }

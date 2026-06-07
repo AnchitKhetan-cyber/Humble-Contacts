@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,9 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
-import kotlin.collections.filter
 import com.humblesolutions.humblecontacts.data.model.Contact
-import androidx.compose.foundation.lazy.items
 
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -43,9 +42,7 @@ fun ContactsScreen(
     var selectedFilter by remember { mutableStateOf("All") }
     var searchQuery    by remember { mutableStateOf("") }
 
-    val filtered = contacts.filter {
-        searchQuery.isBlank() || it.fullName.contains(searchQuery, ignoreCase = true)
-    }
+    val filtered = viewModel.filtered(searchQuery, selectedFilter)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
