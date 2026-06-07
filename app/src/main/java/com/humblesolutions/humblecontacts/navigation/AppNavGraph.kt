@@ -27,6 +27,7 @@ import com.humblesolutions.humblecontacts.ui.auth.PhoneInputScreen
 import com.humblesolutions.humblecontacts.ui.auth.RegisterScreen
 import com.humblesolutions.humblecontacts.ui.contacts.AddContactScreen
 import com.humblesolutions.humblecontacts.ui.contacts.ContactDetailScreen
+import com.humblesolutions.humblecontacts.ui.contacts.ContactViewModel
 import com.humblesolutions.humblecontacts.ui.contacts.ContactsScreen
 import com.humblesolutions.humblecontacts.ui.home.HomeScreen
 import com.humblesolutions.humblecontacts.ui.introduction.IntroductionScreen
@@ -79,6 +80,8 @@ fun AppNavGraph(
             launchSingleTop = true
         }
     }
+
+    val contactsViewModel: ContactViewModel = viewModel()
 
     NavHost(
         navController      = navController,

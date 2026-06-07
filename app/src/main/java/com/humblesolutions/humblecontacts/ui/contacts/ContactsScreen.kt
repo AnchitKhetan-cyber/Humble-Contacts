@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,21 +16,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
-
-
-// ─── Data model ───────────────────────────────────────────────────────────────
-
-data class Contact(
-    val id: String,
-    val name: String,
-    val role: String,
-    val company: String,
-    val metOn: String,
-    val tags: List<String>,
-    val initials: String
-)
+import kotlin.collections.filter
+import com.humblesolutions.humblecontacts.data.model.Contact
+import androidx.compose.foundation.lazy.items
 
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -46,20 +36,15 @@ fun ContactsScreen(
     onNavigateToProfile:  () -> Unit = {},
     onNavigateToAdd:      () -> Unit = {}
 ) {
-    val contacts = listOf(
-        Contact("1", "Sarah Chen",       "Product Designer", "Figma",   "Mar 15, 2026", listOf("Design", "AI/ML"),        "SC"),
-        Contact("2", "Marcus Johnson",   "Engineering Lead", "Linear",  "Mar 10, 2026", listOf("Engineering", "SaaS"),    "MJ"),
-        Contact("3", "Elena Rodriguez",  "VP of Marketing",  "Notion",  "Feb 28, 2026", listOf("Marketing", "Growth"),   "ER"),
-        Contact("4", "David Park",       "Founder & CEO",    "Stripe",  "Feb 20, 2026", listOf("Finance", "SaaS"),       "DP"),
-        Contact("5", "Lisa Wang",        "Product Manager",  "Shopify", "Feb 15, 2026", listOf("Product", "E-commerce"), "LW"),
-    )
+    val viewModel: ContactViewModel = viewModel()
+    val contacts = viewModel.contacts
 
     val filterTabs = listOf("All", "By Industry", "By Event", "By Date")
     var selectedFilter by remember { mutableStateOf("All") }
     var searchQuery    by remember { mutableStateOf("") }
 
     val filtered = contacts.filter {
-        searchQuery.isBlank() || it.name.contains(searchQuery, ignoreCase = true)
+        searchQuery.isBlank() || it.fullName.contains(searchQuery, ignoreCase = true)
     }
 
     Scaffold(
@@ -192,7 +177,7 @@ fun ContactsScreen(
                 items(filtered) { contact ->
                     ContactCard(
                         contact = contact,
-                        onClick = { onNavigateToContact(contact.id) }
+                        onClick = { onNavigateToContact(contact.contactId) }
                     )
                 }
                 item { Spacer(Modifier.height(80.dp)) }
@@ -242,14 +227,14 @@ private fun ContactCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    contact.name,
+                    contact.fullName,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "${contact.role} • ${contact.company}",
+                    "${contact.jobRole} • ${contact.company}",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

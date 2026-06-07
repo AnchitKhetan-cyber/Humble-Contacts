@@ -1,45 +1,36 @@
 package com.humblesolutions.humblecontacts.data.model
 
-import java.time.LocalDate
+import com.google.firebase.Timestamp
 
 data class Contact(
-    val id: String,
-    val firstName: String,
-    val lastName: String,
-    val email: String? = null,
-    val phone: String? = null,
-    val company: String? = null,
-    val role: String? = null,
-    val avatarUrl: String? = null,
+    val contactId: String = "",
+    val ownerId: String = "",
+    val fullName: String = "",
+    val jobRole: String = "",
+    val company: String = "",
+    val industry: String = "",
+    val email: String = "",
+    val phone: String = "",
     val tags: List<String> = emptyList(),
-    val isFavorite: Boolean = false,
-    val metAt: String? = null,           // "Tech Summit 2025"
-    val metOn: LocalDate? = null,
-    val notes: String? = null,
-    val linkedIn: String? = null,
-    val lastFollowUp: LocalDate? = null,
-    val followUpDue: LocalDate? = null,
-    val interactionCount: Int = 0,
+    val isFavourite: Boolean = false,
+    val meetingDate: Timestamp? = null,
+    val meetingLocation: String = "",
+    val eventName: String = "",
+    val conversationNotes: String = "",
+    val entryMethod: String = "manual",
+    val createdAt: Timestamp? = null,
+    val updatedAt: Timestamp? = null
 ) {
-    val fullName: String get() = "$firstName $lastName".trim()
-    val initials: String get() = buildString {
-        firstName.firstOrNull()?.let { append(it.uppercaseChar()) }
-        lastName.firstOrNull()?.let { append(it.uppercaseChar()) }
-    }.ifEmpty { fullName.firstOrNull()?.uppercaseChar()?.toString() ?: "?" }
+    // Computed helpers to avoid changing your UI code much
+    val initials: String get() = fullName
+        .split(" ")
+        .take(2)
+        .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+        .joinToString("")
+
+    val metOn: String get() = meetingDate
+        ?.toDate()
+        ?.let {
+            java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(it)
+        } ?: ""
 }
-
-data class NetworkStats(
-    val totalContacts: Int,
-    val newThisMonth: Int,
-    val followUpsDue: Int,
-    val meetingsThisWeek: Int,
-)
-
-data class RecentActivity(
-    val contactId: String,
-    val contactName: String,
-    val action: ActivityType,
-    val timestamp: Long,
-)
-
-enum class ActivityType { ADDED, FOLLOWED_UP, SHARED_CARD, NOTED }

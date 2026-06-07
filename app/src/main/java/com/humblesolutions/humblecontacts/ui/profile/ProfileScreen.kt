@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
 
@@ -34,6 +36,21 @@ fun ProfileScreen(
     onNavigateToSettings: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
+
+    val user = FirebaseAuth.getInstance().currentUser
+
+    val displayName = user?.displayName ?: "User"
+    val email = user?.email ?: ""
+
+    val initials = displayName
+        .split(" ")
+        .mapNotNull { it.firstOrNull()?.toString() }
+        .take(2)
+        .joinToString("")
+        .uppercase()
+
+    val photoUrl = user?.photoUrl
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
@@ -70,31 +87,44 @@ fun ProfileScreen(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(84.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "JD",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 28.sp,
-                            color = MaterialTheme.colorScheme.primary
+                    if (photoUrl != null) {
+
+                        AsyncImage(
+                            model = photoUrl,
+                            contentDescription = "Profile Photo",
+                            modifier = Modifier
+                                .size(84.dp)
+                                .clip(CircleShape)
                         )
+
+                    } else {
+
+                        Box(
+                            modifier = Modifier
+                                .size(84.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = initials,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 28.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
 
                     Spacer(Modifier.height(14.dp))
 
                     Text(
-                        "John Doe",
+                        displayName,
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "john.doe@email.com",
+                        email,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

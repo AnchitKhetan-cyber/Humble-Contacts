@@ -96,5 +96,6 @@ dependencies {
     implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("androidx.activity:activity-compose:1.9.0")
 
+    implementation("androidx.compose.material3:material3")
     implementation("io.coil-kt:coil-compose:2.7.0")
 }
