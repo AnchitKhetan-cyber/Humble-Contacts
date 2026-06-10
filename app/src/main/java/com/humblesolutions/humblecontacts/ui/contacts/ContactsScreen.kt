@@ -42,7 +42,18 @@ fun ContactsScreen(
     var selectedFilter by remember { mutableStateOf("All") }
     var searchQuery    by remember { mutableStateOf("") }
 
-    val filtered = viewModel.filtered(searchQuery, selectedFilter)
+    val filtered by remember(
+        viewModel.contacts,
+        searchQuery,
+        selectedFilter
+    ) {
+        mutableStateOf(
+            viewModel.filtered(
+                searchQuery,
+                selectedFilter
+            )
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,

@@ -27,6 +27,7 @@ import com.google.firebase.firestore.firestore
 import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 
@@ -46,6 +47,16 @@ fun ContactDetailScreen(
     // ── Load the real contact from Firestore ──────────────────────────────────
     var contact by remember { mutableStateOf<Contact?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+
+    val scope = rememberCoroutineScope()
+
+    var showAddNoteDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var showDeleteDialog by remember {
+        mutableStateOf(false)
+    }
 
     LaunchedEffect(contactId) {
         if (contactId.isNotBlank()) {
@@ -130,6 +141,27 @@ fun ContactDetailScreen(
                             Icons.Outlined.ArrowBack,
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(6.dp)
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = {
+                        showDeleteDialog = true
+                    },
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .align(Alignment.TopEnd)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                    ) {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            contentDescription = "Delete Contact",
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(6.dp)
                         )
                     }
@@ -274,12 +306,151 @@ fun ContactDetailScreen(
 
             when (selectedTab) {
                 0 -> OverviewTab(contact = c)
-                1 -> NotesTab(notes = c.conversationNotes, eventName = c.eventName, metOn = c.metOn)
+                1 -> NotesTab(
+                    notes = c.conversationNotes,
+                    eventName = c.eventName,
+                    metOn = c.metOn,
+                    onAddNote = {
+                        showAddNoteDialog = true
+                    }
+                )
                 2 -> MediaTab()
             }
 
             Spacer(Modifier.height(16.dp))
         }
+    }
+
+    if (showAddNoteDialog) {
+
+        var newNote by remember {
+            mutableStateOf("")
+        }
+
+        AlertDialog(
+            onDismissRequest = {
+                showAddNoteDialog = false
+            },
+
+            title = {
+                Text("Add Note")
+            },
+
+            text = {
+                OutlinedTextField(
+                    value = newNote,
+                    onValueChange = {
+                        newNote = it
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 4,
+                    placeholder = {
+                        Text("Write your note here...")
+                    }
+                )
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+
+                        contact?.let { currentContact ->
+
+                            Firebase.firestore
+                                .collection("contacts")
+                                .document(currentContact.contactId)
+                                .update(
+                                    "conversationNotes",
+                                    if (currentContact.conversationNotes.isBlank())
+                                        newNote
+                                    else
+                                        currentContact.conversationNotes + "\n\n" + newNote
+                                )
+
+                            contact = currentContact.copy(
+                                conversationNotes =
+                                    if (currentContact.conversationNotes.isBlank())
+                                        newNote
+                                    else
+                                        currentContact.conversationNotes + "\n\n" + newNote
+                            )
+                        }
+
+                        showAddNoteDialog = false
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+                    onClick = {
+                        showAddNoteDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDeleteDialog) {
+
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+
+            title = {
+                Text("Delete Contact")
+            },
+
+            text = {
+                Text(
+                    "Are you sure you want to permanently delete this contact?"
+                )
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+
+                        contact?.let { contact ->
+
+                            showDeleteDialog = false
+
+                            scope.launch {
+
+                                Firebase.firestore
+                                    .collection("contacts")
+                                    .document(contact.contactId)
+                                    .delete()
+                                    .await()
+
+                                onBack()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -426,7 +597,12 @@ private fun InfoRow(label: String, value: String, isLink: Boolean) {
 // ─── Notes Tab — real data ────────────────────────────────────────────────────
 
 @Composable
-private fun NotesTab(notes: String, eventName: String, metOn: String) {
+private fun NotesTab(
+    notes: String,
+    eventName: String,
+    metOn: String,
+    onAddNote: () -> Unit
+){
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Surface(
             shape = RoundedCornerShape(16.dp),
@@ -481,7 +657,7 @@ private fun NotesTab(notes: String, eventName: String, metOn: String) {
         Spacer(Modifier.height(12.dp))
 
         OutlinedButton(
-            onClick = {},
+            onClick = onAddNote,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
         ) {

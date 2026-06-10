@@ -1,5 +1,6 @@
 package com.humblesolutions.humblecontacts.data.repository
 
+import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
@@ -14,25 +15,75 @@ class ContactRepository {
     private val uid get() = auth.currentUser?.uid ?: ""
 
     fun getContactsRealtime(onResult: (List<Contact>) -> Unit) {
+
+        Log.d("CONTACT_DEBUG", "Current UID = $uid")
+
         db.collection("contacts")
             .whereEqualTo("ownerId", uid)
-            .orderBy("meetingDate", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) return@addSnapshotListener
-                val contacts = snapshot?.toObjects(Contact::class.java) ?: emptyList()
+
+                if (error != null) {
+                    Log.e(
+                        "CONTACT_DEBUG",
+                        error.message ?: "Unknown Firestore error"
+                    )
+                    return@addSnapshotListener
+                }
+
+                val contacts =
+                    snapshot?.toObjects(Contact::class.java)
+                        ?.sortedByDescending { it.meetingDate }
+                        ?: emptyList()
+
+                Log.d(
+                    "CONTACT_DEBUG",
+                    "Contacts found = ${contacts.size}"
+                )
+
                 onResult(contacts)
             }
     }
 
-    suspend fun addContact(contact: Contact): String {
+    suspend fun addContact(contact: Contact): Boolean {
+
+        val existingEmail =
+            if (contact.email.isNotBlank()) {
+                db.collection("contacts")
+                    .whereEqualTo("ownerId", uid)
+                    .whereEqualTo("email", contact.email)
+                    .get()
+                    .await()
+            } else null
+
+        if (existingEmail != null && !existingEmail.isEmpty) {
+            return false
+        }
+
+        val existingPhone =
+            if (contact.phone.isNotBlank()) {
+                db.collection("contacts")
+                    .whereEqualTo("ownerId", uid)
+                    .whereEqualTo("phone", contact.phone)
+                    .get()
+                    .await()
+            } else null
+
+        if (existingPhone != null && !existingPhone.isEmpty) {
+            return false
+        }
+
         val ref = db.collection("contacts").document()
-        ref.set(contact.copy(
-            contactId = ref.id,
-            ownerId = uid,
-            createdAt = Timestamp.now(),
-            updatedAt = Timestamp.now()
-        )).await()
-        return ref.id
+
+        ref.set(
+            contact.copy(
+                contactId = ref.id,
+                ownerId = uid,
+                createdAt = Timestamp.now(),
+                updatedAt = Timestamp.now()
+            )
+        ).await()
+
+        return true
     }
 
     suspend fun deleteContact(contactId: String) {

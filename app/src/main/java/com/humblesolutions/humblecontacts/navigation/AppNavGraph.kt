@@ -311,18 +311,37 @@ fun AppNavGraph(
 
         // ── NFC ───────────────────────────────────────────────────────────────
         composable(
-            route              = Routes.NFC,
-            enterTransition    = { slideIn },
-            exitTransition     = { slideOut },
+            route = Routes.NFC,
+            enterTransition = { slideIn },
+            exitTransition = { slideOut },
             popEnterTransition = { popIn },
-            popExitTransition  = { popOut }
+            popExitTransition = { popOut }
         ) {
+
             NfcScreen(
-                onBack               = { navController.popBackStack() },
-                onNavigateToHome     = { navController.navigate(Routes.HOME) { launchSingleTop = true } },
-                onNavigateToContacts = { navController.navigate(Routes.CONTACTS) { launchSingleTop = true } },
-                onNavigateToScan     = { navController.navigate(Routes.SCAN) },
-                onNavigateToProfile  = { navController.navigate(Routes.PROFILE) }
+                contacts = contactsViewModel.contacts,
+
+                onBack = { navController.popBackStack() },
+
+                onNavigateToHome = {
+                    navController.navigate(Routes.HOME) {
+                        launchSingleTop = true
+                    }
+                },
+
+                onNavigateToContacts = {
+                    navController.navigate(Routes.CONTACTS) {
+                        launchSingleTop = true
+                    }
+                },
+
+                onNavigateToScan = {
+                    navController.navigate(Routes.SCAN)
+                },
+
+                onNavigateToProfile = {
+                    navController.navigate(Routes.PROFILE)
+                }
             )
         }
 

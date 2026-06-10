@@ -1,8 +1,12 @@
 package com.humblesolutions.humblecontacts.ui.home
 
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
@@ -10,6 +14,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.humblesolutions.humblecontacts.data.model.Contact
+import com.humblesolutions.humblecontacts.utils.ContactExporter
 import java.util.Calendar
 
 class HomeViewModel : ViewModel() {
@@ -40,16 +45,55 @@ class HomeViewModel : ViewModel() {
         contacts.map { it.eventName }.filter { it.isNotBlank() }.toSet().size
 
     // 5 most recently added contacts
-    val recentContacts: List<Contact> get() =
-        contacts.sortedByDescending { it.createdAt?.seconds ?: 0L }.take(5)
+    val recentContacts: List<Contact>
+        get() = contacts.take(5)
+
+    val followUps: List<Contact>
+        get() = contacts
+            .filter {
+                it.conversationNotes.isNotBlank()
+            }
+            .take(5)
+
+    fun exportContacts(
+        context: Context
+    ) {
+
+        val success = ContactExporter.exportToCsv(
+            context,
+            contacts
+        )
+
+        Toast.makeText(
+            context,
+            if (success)
+                "${contacts.size} contacts exported to Downloads"
+            else
+                "Export failed",
+            Toast.LENGTH_LONG
+        ).show()
+    }
 
     init {
+
         db.collection("contacts")
             .whereEqualTo("ownerId", uid)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, _ ->
-                contacts  = snapshot?.toObjects(Contact::class.java) ?: emptyList()
+            .addSnapshotListener { snapshot, error ->
+
+                if (error != null) {
+                    isLoading = false
+                    return@addSnapshotListener
+                }
+
+                contacts = snapshot
+                    ?.toObjects(Contact::class.java)
+                    ?.sortedByDescending {
+                        it.createdAt?.seconds ?: 0L
+                    }
+                    ?: emptyList()
+
                 isLoading = false
             }
     }
+
 }

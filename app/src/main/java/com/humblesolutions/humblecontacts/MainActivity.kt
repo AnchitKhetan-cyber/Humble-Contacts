@@ -12,28 +12,33 @@ import com.humblesolutions.humblecontacts.navigation.Routes
 import com.humblesolutions.humblecontacts.ui.theme.HumbleContactsTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
+
         setContent {
             val systemDark = isSystemInDarkTheme()
             var darkMode by remember { mutableStateOf(systemDark) }
 
-            // Stays in sync if user changes system theme while the app is open
             LaunchedEffect(systemDark) {
                 darkMode = systemDark
             }
 
-            // ✅ Defined here — checks Firebase for an existing session
-            val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-
             HumbleContactsTheme(darkTheme = darkMode) {
                 AppNavGraph(
                     startDestination = Routes.SPLASH,
-                    darkMode         = darkMode,
+                    darkMode = darkMode,
                     onDarkModeChange = { darkMode = it }
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+
+        setIntent(intent)
     }
 }

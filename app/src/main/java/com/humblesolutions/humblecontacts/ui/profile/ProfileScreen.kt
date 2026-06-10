@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,6 +25,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.humblesolutions.humblecontacts.ui.home.HomeViewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
+import com.humblesolutions.humblecontacts.ui.settings.SettingsViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,6 +47,8 @@ fun ProfileScreen(
     val displayName = user?.displayName ?: "User"
     val email = user?.email ?: ""
 
+    val context = LocalContext.current
+
     val initials = displayName
         .split(" ")
         .mapNotNull { it.firstOrNull()?.toString() }
@@ -53,6 +57,10 @@ fun ProfileScreen(
         .uppercase()
 
     val photoUrl = user?.photoUrl
+
+    val settingsViewModel: SettingsViewModel = viewModel()
+
+    val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -199,12 +207,14 @@ fun ProfileScreen(
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsRow(
-                        icon     = Icons.Outlined.Download,
-                        iconBg   = MaterialTheme.colorScheme.secondaryContainer,
+                        icon = Icons.Outlined.Download,
+                        iconBg = MaterialTheme.colorScheme.secondaryContainer,
                         iconTint = MaterialTheme.colorScheme.secondary,
-                        title    = "Export Data",
+                        title = "Export Data",
                         subtitle = "Download all contacts as CSV",
-                        onClick  = {}
+                        onClick = {
+                            viewModel.exportContacts(context)
+                        }
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsRow(
@@ -233,13 +243,15 @@ fun ProfileScreen(
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsToggleRow(
-                        icon            = Icons.Outlined.Notifications,
-                        iconBg          = MaterialTheme.colorScheme.primaryContainer,
-                        iconTint        = MaterialTheme.colorScheme.primary,
-                        title           = "Notifications",
-                        subtitle        = "Follow-up reminders",
-                        checked         = true,
-                        onCheckedChange = {}
+                        icon = Icons.Outlined.Notifications,
+                        iconBg = MaterialTheme.colorScheme.primaryContainer,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        title = "Notifications",
+                        subtitle = "Follow-up reminders",
+                        checked = notificationsEnabled,
+                        onCheckedChange = {
+                            settingsViewModel.setNotifications(it)
+                        }
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                     SettingsRow(

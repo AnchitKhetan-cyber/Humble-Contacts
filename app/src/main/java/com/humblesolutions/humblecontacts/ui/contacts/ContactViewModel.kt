@@ -1,13 +1,17 @@
 // ui/contacts/ContactViewModel.kt
 package com.humblesolutions.humblecontacts.ui.contacts
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.data.repository.ContactRepository
+import com.humblesolutions.humblecontacts.utils.ContactExporter
 import kotlinx.coroutines.launch
 
 class ContactViewModel : ViewModel() {
@@ -45,11 +49,12 @@ class ContactViewModel : ViewModel() {
         company: String,
         email: String,
         phone: String,
-        notes: String
+        notes: String,
+        onResult: (Boolean) -> Unit
     ) {
         viewModelScope.launch {
 
-            val contact = com.humblesolutions.humblecontacts.data.model.Contact(
+            val contact = Contact(
                 fullName = fullName,
                 jobRole = jobRole,
                 company = company,
@@ -60,7 +65,9 @@ class ContactViewModel : ViewModel() {
                 entryMethod = "business_card"
             )
 
-            repo.addContact(contact)
+            val added = repo.addContact(contact)
+
+            onResult(added)
         }
     }
 

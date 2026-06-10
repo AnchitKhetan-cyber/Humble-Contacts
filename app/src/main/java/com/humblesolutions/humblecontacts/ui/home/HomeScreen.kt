@@ -19,8 +19,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
+
 
 
 // ─── Data models (replace with real data later) ───────────────────────────────
@@ -41,16 +43,24 @@ fun HomeScreen(
     onNavigateToProfile:   () -> Unit = {},
     onSearchClick:         () -> Unit = {}
 ) {
-    val recentContacts = listOf(
-        RecentContact("Sarah Chen",     "Product...", "SC"),
-        RecentContact("Marcus Johnson", "Enginee...", "MJ"),
-        RecentContact("Elena Rodriguez","VP of M...", "ER"),
-    )
 
-    val followUps = listOf(
-        FollowUp("David Park",  "Stripe",   "Follow up about partnership", "3d ago", true),
-        FollowUp("Lisa Wang",   "Shopify",  "Send pitch deck",             "5d ago", true),
-    )
+    val viewModel: HomeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+
+    val recentContacts = viewModel.recentContacts
+
+
+    if (viewModel.isLoading) {
+
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+
+        return
+    }
+
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -174,21 +184,21 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Outlined.People,
                     iconTint = MaterialTheme.colorScheme.primary,
-                    value = "247",
+                    value = viewModel.totalContacts.toString(),
                     label = "Total Contacts"
                 )
                 StatCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Outlined.TrendingUp,
                     iconTint = MaterialTheme.colorScheme.secondary,
-                    value = "+12",
+                    value = "+${viewModel.thisMonthCount}",
                     label = "This Month"
                 )
                 StatCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Outlined.CalendarMonth,
                     iconTint = MaterialTheme.colorScheme.tertiary ?: MaterialTheme.colorScheme.secondary,
-                    value = "8",
+                    value = viewModel.uniqueEventsCount.toString(),
                     label = "Events"
                 )
             }
@@ -226,8 +236,29 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                recentContacts.forEach { contact ->
-                    RecentContactCard(contact = contact, onClick = { onNavigateToContact(contact.name) })
+                if (recentContacts.isEmpty()) {
+
+                    Text(
+                        text = "No contacts yet",
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                } else {
+
+                    recentContacts.forEach { contact ->
+
+                        RecentContactCard(
+                            contact = RecentContact(
+                                name = contact.fullName,
+                                role = contact.jobRole,
+                                initials = contact.initials
+                            ),
+                            onClick = {
+                                onNavigateToContact(contact.contactId)
+                            }
+                        )
+                    }
                 }
             }
 
@@ -257,12 +288,34 @@ fun HomeScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            followUps.forEach { followUp ->
-                FollowUpCard(
-                    followUp = followUp,
-                    modifier = Modifier.padding(horizontal = 20.dp)
+            if (viewModel.followUps.isEmpty()) {
+
+                Text(
+                    text = "No follow-ups yet",
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(10.dp))
+
+            } else {
+
+                viewModel.followUps.forEach { contact ->
+
+                    FollowUpCard(
+                        followUp = FollowUp(
+                            name = contact.fullName,
+                            company = contact.company,
+                            note = contact.conversationNotes.take(40),
+                            daysAgo = getDaysAgo(contact.createdAt),
+                            isOverdue = false
+                        ),
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        onClick = {
+                            onNavigateToContact(contact.contactId)
+                        }
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -374,10 +427,15 @@ private fun RecentContactCard(
 @Composable
 private fun FollowUpCard(
     followUp: FollowUp,
-    modifier: Modifier = Modifier
-) {
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+){
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable {
+                onClick()
+            },
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp,
@@ -437,5 +495,22 @@ private fun FollowUpCard(
                 )
             }
         }
+    }
+}
+
+
+private fun getDaysAgo(timestamp: com.google.firebase.Timestamp?): String {
+
+    if (timestamp == null) return "Today"
+
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp.toDate().time
+
+    val days = diff / (1000 * 60 * 60 * 24)
+
+    return when {
+        days <= 0 -> "Today"
+        days == 1L -> "1d ago"
+        else -> "${days}d ago"
     }
 }

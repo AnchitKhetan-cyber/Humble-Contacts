@@ -98,4 +98,10 @@ dependencies {
 
     implementation("androidx.compose.material3:material3")
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.2")
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
 }

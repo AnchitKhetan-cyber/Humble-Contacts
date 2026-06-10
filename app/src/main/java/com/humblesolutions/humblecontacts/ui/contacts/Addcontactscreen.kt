@@ -1,6 +1,9 @@
 package com.humblesolutions.humblecontacts.ui.contacts
 
+import android.content.Intent
 import android.net.Uri
+import android.provider.ContactsContract
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -8,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -15,12 +19,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -49,6 +57,8 @@ fun AddContactScreen(
     var extractedContact by remember {
         mutableStateOf(ContactInfo())
     }
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(extractedContact) {
         fullName = extractedContact.name
@@ -89,9 +99,16 @@ fun AddContactScreen(
             imageUri = uri
         }
 
+    var showSaveToPhoneDialog by remember {
+        mutableStateOf(false)
+    }
+
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState)
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -246,14 +263,35 @@ fun AddContactScreen(
 
             // ── Basic Details ────────────────────────────────────────────────
             SectionCard(title = "Basic Details") {
-                ContactTextField(value = fullName,  onValueChange = { fullName  = it; nameError = false }, label = "Full Name *",  placeholder = "John Doe")
+                ContactTextField(
+                    value = fullName,
+                    onValueChange = {
+                        fullName = it
+                        nameError = false
+                    },
+                    label = "Full Name *",
+                    placeholder = "John Doe",
+                    capitalization = KeyboardCapitalization.Words
+                )
                 if (nameError) {
                     Text("Name is required", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = androidx.compose.ui.Modifier.padding(start = 4.dp, top = 2.dp))
                 }
                 Spacer(Modifier.height(12.dp))
-                ContactTextField(value = jobRole,   onValueChange = { jobRole   = it }, label = "Job Role",     placeholder = "Product Designer")
+                ContactTextField(
+                    value = jobRole,
+                    onValueChange = { jobRole = it },
+                    label = "Job Role",
+                    placeholder = "Software Engineer",
+                    capitalization = KeyboardCapitalization.Words
+                )
                 Spacer(Modifier.height(12.dp))
-                ContactTextField(value = company,   onValueChange = { company   = it }, label = "Company",      placeholder = "Figma")
+                ContactTextField(
+                    value = company,
+                    onValueChange = { company = it },
+                    label = "Company",
+                    placeholder = "Google",
+                    capitalization = KeyboardCapitalization.Words
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -264,16 +302,22 @@ fun AddContactScreen(
                     value = email,
                     onValueChange = { email = it },
                     label = "Email",
-                    placeholder = "john@company.com",
-                    leadingIcon = { Icon(Icons.Outlined.Email, null, modifier = Modifier.size(18.dp)) }
+                    placeholder = "john@example.com",
+                    keyboardType = KeyboardType.Email,
+                    leadingIcon = {
+                        Icon(Icons.Outlined.Email, null)
+                    }
                 )
                 Spacer(Modifier.height(12.dp))
                 ContactTextField(
                     value = phone,
                     onValueChange = { phone = it },
                     label = "Phone",
-                    placeholder = "+1 (555) 000-0000",
-                    leadingIcon = { Icon(Icons.Outlined.Phone, null, modifier = Modifier.size(18.dp)) }
+                    placeholder = "+91 9876543210",
+                    keyboardType = KeyboardType.Phone,
+                    leadingIcon = {
+                        Icon(Icons.Outlined.Phone, null)
+                    }
                 )
                 Spacer(Modifier.height(12.dp))
                 ContactTextField(
@@ -281,7 +325,10 @@ fun AddContactScreen(
                     onValueChange = { linkedIn = it },
                     label = "LinkedIn",
                     placeholder = "linkedin.com/in/johndoe",
-                    leadingIcon = { Icon(Icons.Outlined.Link, null, modifier = Modifier.size(18.dp)) }
+                    keyboardType = KeyboardType.Uri,
+                    leadingIcon = {
+                        Icon(Icons.Outlined.Link, null)
+                    }
                 )
             }
 
@@ -309,23 +356,46 @@ fun AddContactScreen(
             Spacer(Modifier.height(24.dp))
 
             // ── Save button ──────────────────────────────────────────────────
+            val scope = rememberCoroutineScope()
             Button(
+                enabled = !isSaving,
                 onClick = {
+
                     if (fullName.isBlank()) {
                         nameError = true
                         return@Button
                     }
-                    nameError = false
-                    isSaving = true
+
                     viewModel.addContact(
                         fullName = fullName.trim(),
-                        jobRole  = jobRole.trim(),
-                        company  = company.trim(),
-                        email    = email.trim(),
-                        phone    = phone.trim(),
-                        notes    = notes.trim()
-                    )
-                    onSave()
+                        jobRole = jobRole.trim(),
+                        company = company.trim(),
+                        email = email.trim(),
+                        phone = phone.trim(),
+                        notes = notes.trim()
+                    ) { added ->
+
+                        if (added) {
+
+                            Toast.makeText(
+                                context,
+                                "Contact saved",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            showSaveToPhoneDialog = true
+
+                        } else {
+
+                            Toast.makeText(
+                                context,
+                                "Contact already exists",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            onSave()
+                        }
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -336,7 +406,7 @@ fun AddContactScreen(
                 )
             ) {
                 Text(
-                    "Save Contact",
+                    text = if (isSaving) "Saving..." else "Save",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -344,6 +414,67 @@ fun AddContactScreen(
 
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (showSaveToPhoneDialog) {
+
+        AlertDialog(
+            onDismissRequest = {},
+
+            icon = {
+                Icon(
+                    Icons.Outlined.CheckCircle,
+                    contentDescription = null
+                )
+            },
+
+            title = {
+                Text("Contact Saved")
+            },
+
+            text = {
+                Text(
+                    "The contact was saved to Humble Contacts. Would you also like to save it to your phone contacts?"
+                )
+            },
+
+            confirmButton = {
+
+                TextButton(
+                    onClick = {
+
+                        saveToDeviceContacts(
+                            context = context,
+                            name = fullName,
+                            phone = phone,
+                            email = email,
+                            company = company,
+                            jobRole = jobRole
+                        )
+
+                        showSaveToPhoneDialog = false
+
+                        onSave()
+                    }
+                ) {
+                    Text("Save to Phone")
+                }
+            },
+
+            dismissButton = {
+
+                TextButton(
+                    onClick = {
+
+                        showSaveToPhoneDialog = false
+
+                        onSave()
+                    }
+                ) {
+                    Text("Done")
+                }
+            }
+        )
     }
 }
 
@@ -381,7 +512,9 @@ private fun ContactTextField(
     onValueChange: (String) -> Unit,
     label: String,
     placeholder: String,
-    leadingIcon: (@Composable () -> Unit)? = null
+    leadingIcon: (@Composable () -> Unit)? = null,
+    capitalization: KeyboardCapitalization = KeyboardCapitalization.None,
+    keyboardType: KeyboardType = KeyboardType.Text
 ) {
     Column {
         Text(
@@ -390,21 +523,74 @@ private fun ContactTextField(
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
+
         Spacer(Modifier.height(6.dp))
+
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) },
+            keyboardOptions = KeyboardOptions(
+                capitalization = capitalization,
+                keyboardType = keyboardType
+            ),
+            placeholder = {
+                Text(
+                    placeholder,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            },
             leadingIcon = leadingIcon,
             shape = RoundedCornerShape(10.dp),
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedBorderColor    = androidx.compose.ui.graphics.Color.Transparent,
-                focusedBorderColor      = MaterialTheme.colorScheme.primary
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedBorderColor = Color.Transparent,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
             )
         )
     }
+}
+
+private fun saveToDeviceContacts(
+    context: android.content.Context,
+    name: String,
+    phone: String,
+    email: String,
+    company: String,
+    jobRole: String
+) {
+
+    val intent = Intent(Intent.ACTION_INSERT).apply {
+        type = ContactsContract.RawContacts.CONTENT_TYPE
+
+        putExtra(
+            ContactsContract.Intents.Insert.NAME,
+            name
+        )
+
+        putExtra(
+            ContactsContract.Intents.Insert.PHONE,
+            phone
+        )
+
+        putExtra(
+            ContactsContract.Intents.Insert.EMAIL,
+            email
+        )
+
+        putExtra(
+            ContactsContract.Intents.Insert.COMPANY,
+            company
+        )
+
+        putExtra(
+            ContactsContract.Intents.Insert.JOB_TITLE,
+            jobRole
+        )
+    }
+
+    context.startActivity(intent)
 }

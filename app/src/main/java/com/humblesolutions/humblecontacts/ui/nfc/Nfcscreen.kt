@@ -1,5 +1,7 @@
 package com.humblesolutions.humblecontacts.ui.nfc
 
+import android.app.Activity
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,9 +17,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
 
@@ -29,6 +33,7 @@ enum class NfcScreenState { SHARE, SUCCESS }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NfcScreen(
+    contacts: List<Contact>,
     onBack:              () -> Unit = {},
     onNavigateToHome:    () -> Unit = {},
     onNavigateToContacts:() -> Unit = {},
@@ -37,6 +42,13 @@ fun NfcScreen(
 ) {
     var screenState   by remember { mutableStateOf(NfcScreenState.SHARE) }
     var selectedShare by remember { mutableStateOf("Contact Only") }
+
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    val nfcHelper = remember(activity) {
+        activity?.let { NfcHelper(it) }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -72,9 +84,56 @@ fun NfcScreen(
     ) { padding ->
         when (screenState) {
             NfcScreenState.SHARE   -> ShareView(
+                contacts = contacts,
                 selectedShare = selectedShare,
                 onSelectShare = { selectedShare = it },
-                onStartNfc    = { screenState = NfcScreenState.SUCCESS },
+                onStartNfc = {
+
+                    if (nfcHelper == null) {
+                        Toast.makeText(
+                            context,
+                            "Activity unavailable",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@ShareView
+                    }
+
+                    when {
+
+                        !nfcHelper.isNfcSupported() -> {
+                            Toast.makeText(
+                                context,
+                                "NFC not supported on this device",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+
+                        !nfcHelper.isNfcEnabled() -> {
+                            Toast.makeText(
+                                context,
+                                "Please enable NFC",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+
+                        else -> {
+
+                            val payload = NfcContactPayload(
+                                name = "Anchit Khetan",
+                                phone = "+91XXXXXXXXXX",
+                                email = "anchit@example.com"
+                            )
+
+                            val json = payload.toJson()
+
+                            Toast.makeText(
+                                context,
+                                json,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                },
                 modifier      = Modifier.padding(padding)
             )
             NfcScreenState.SUCCESS -> SuccessView(
@@ -90,6 +149,7 @@ fun NfcScreen(
 
 @Composable
 private fun ShareView(
+    contacts: List<Contact>,
     selectedShare: String,
     onSelectShare: (String) -> Unit,
     onStartNfc:    () -> Unit,
@@ -101,10 +161,11 @@ private fun ShareView(
         "Card Only"      to "Share digital business card"
     )
 
-    val recentExchanges = listOf(
-        "DP" to "David Park" to ("Stripe • 2 hours ago"),
-        "LW" to "Lisa Wang"  to ("Shopify • Yesterday"),
-    )
+    val recentExchanges =
+        contacts
+            .filter { it.entryMethod == "nfc" }
+            .sortedByDescending { it.createdAt }
+            .take(5)
 
     Column(
         modifier = modifier
@@ -206,44 +267,90 @@ private fun ShareView(
 
         // ── Recent exchanges ─────────────────────────────────────────────────
         Text(
-            "Recent Exchanges",
+            "Recent NFC Exchanges",
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(Modifier.height(12.dp))
 
-        recentExchanges.forEach { (pair, meta) ->
-            val (initials, name) = pair
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp,
-                shadowElevation = 2.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        if (recentExchanges.isEmpty()) {
+
+            Text(
+                text = "No contacts available yet",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 14.sp
+            )
+
+        } else {
+
+            recentExchanges.forEach { contact ->
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 1.dp,
+                    shadowElevation = 2.dp
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
+
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(initials, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text(name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text(meta, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = contact.initials,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        Column {
+
+                            Text(
+                                text = contact.fullName,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Text(
+                                text = buildString {
+
+                                    if (contact.company.isNotBlank()) {
+                                        append(contact.company)
+                                    }
+
+                                    if (contact.jobRole.isNotBlank()) {
+
+                                        if (isNotEmpty()) append(" • ")
+
+                                        append(contact.jobRole)
+                                    }
+                                },
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
+
+                Spacer(Modifier.height(10.dp))
             }
-            Spacer(Modifier.height(10.dp))
         }
+
+
 
         Spacer(Modifier.height(16.dp))
     }
