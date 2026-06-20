@@ -1,0 +1,33 @@
+package com.humblesolutions.humblecontacts.data.model
+
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.PropertyName
+
+data class UserProfile(
+    val userId: String = "",
+
+    // Google Sign-In
+    val name: String = "",
+    val email: String = "",
+    val profilePhotoUrl: String = "",
+
+    // User details
+    val profession: String = "",
+    val company: String = "",
+    val phone: String = "",
+    val countryCode: String = "+91",
+    val linkedInUrl: String = "",
+    val address: String = "",
+    val bio: String = "",
+
+    // App settings
+    val authProviders: List<String> = emptyList(),
+    val shareSettings: ShareSettings = ShareSettings(),
+    val stats: UserStats = UserStats(),
+    val visitingCard: VisitingCard = VisitingCard(),
+
+    // Metadata
+    var isProfileCompleted: Boolean = false,
+    val createdAt: Timestamp = Timestamp.now(),
+    val updatedAt: Timestamp = Timestamp.now()
+)
