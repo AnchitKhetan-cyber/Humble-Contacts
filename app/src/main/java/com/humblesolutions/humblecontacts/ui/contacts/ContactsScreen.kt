@@ -2,6 +2,7 @@ package com.humblesolutions.humblecontacts.ui.contacts
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -156,18 +157,28 @@ fun ContactsScreen(
                 filterTabs.forEach { tab ->
                     val isSelected = tab == selectedFilter
                     Surface(
+                        onClick = { selectedFilter = tab },
                         shape = RoundedCornerShape(20.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.clickable { selectedFilter = tab }
+                        color = if (isSelected)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Text(
-                            tab,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                            text = tab,
+                            modifier = Modifier.padding(
+                                horizontal = 14.dp,
+                                vertical = 7.dp
+                            ),
                             fontSize = 13.sp,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = if (isSelected)
+                                FontWeight.SemiBold
+                            else
+                                FontWeight.Normal,
+                            color = if (isSelected)
+                                MaterialTheme.colorScheme.onPrimary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
