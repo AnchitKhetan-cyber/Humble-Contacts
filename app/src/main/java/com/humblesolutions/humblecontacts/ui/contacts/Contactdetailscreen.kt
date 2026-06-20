@@ -1024,30 +1024,34 @@ private fun InfoRow(
 ) {
     val context = LocalContext.current
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = isLink) {
                 if (isLink) {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(value)
+                    context.startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse(value)
+                        )
                     )
-                    context.startActivity(intent)
                 }
             }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
-        Text(
-            label,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
 
         Text(
-            value,
-            fontSize = 14.sp,
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
             color = if (isLink)
                 MaterialTheme.colorScheme.primary
             else

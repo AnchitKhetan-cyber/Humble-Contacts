@@ -33,9 +33,9 @@ class ProfileViewModel : ViewModel() {
                 onSuccess()
 
             } catch (e: Exception) {
+                android.util.Log.e("DELETE_ACCOUNT", "Delete failed", e)
 
                 when (e) {
-
                     is FirebaseAuthRecentLoginRequiredException ->
                         onError("REAUTH_REQUIRED")
 

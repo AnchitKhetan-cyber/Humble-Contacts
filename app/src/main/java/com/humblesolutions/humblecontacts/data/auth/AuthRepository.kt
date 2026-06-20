@@ -116,7 +116,24 @@ class AuthRepository {
     }
 
     suspend fun deleteCurrentUser() {
-        auth.currentUser?.delete()?.await()
+
+        val user = auth.currentUser
+            ?: throw Exception("Current user is null")
+
+        android.util.Log.d("AUTH_DELETE", "Deleting user: ${user.uid}")
+
+        try {
+
+            user.delete().await()
+
+            android.util.Log.d("AUTH_DELETE", "User deleted successfully")
+
+        } catch (e: Exception) {
+
+            android.util.Log.e("AUTH_DELETE", "Delete failed", e)
+
+            throw e
+        }
     }
 
     private suspend fun syncUserDocument() {

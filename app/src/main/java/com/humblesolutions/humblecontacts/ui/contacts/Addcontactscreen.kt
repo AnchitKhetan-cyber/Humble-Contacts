@@ -75,6 +75,8 @@ fun AddContactScreen(
     var nameError by rememberSaveable { mutableStateOf(false) }
     var isSaving  by rememberSaveable { mutableStateOf(false) }
 
+    var savingDots by rememberSaveable { mutableStateOf("") }
+
     var extractedContact by rememberSaveable {
         mutableStateOf(ContactInfo())
     }
@@ -122,6 +124,23 @@ fun AddContactScreen(
             }
         } else {
             extractingDots = ""
+        }
+    }
+
+    LaunchedEffect(isSaving) {
+        if (isSaving) {
+            while (true) {
+                savingDots = "."
+                delay(400)
+
+                savingDots = ".."
+                delay(400)
+
+                savingDots = "..."
+                delay(400)
+            }
+        } else {
+            savingDots = ""
         }
     }
 
@@ -636,6 +655,8 @@ fun AddContactScreen(
                         "https://www.linkedin.com/in/${linkedIn.trim()}"
                     }
 
+                    isSaving = true
+
                     viewModel.addContact(
                         fullName = fullName.trim(),
                         jobRole = jobRole.trim(),
@@ -647,6 +668,8 @@ fun AddContactScreen(
                         notes = notes.trim(),
                         imageUri = imageUris.firstOrNull()
                     ) { added ->
+
+                        isSaving = false
 
                         if (added) {
 
@@ -672,7 +695,7 @@ fun AddContactScreen(
                 )
             ) {
                 Text(
-                    text = if (isSaving) "Saving..." else "Save",
+                    text = if (isSaving) "Saving$savingDots" else "Save",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -761,6 +784,8 @@ fun AddContactScreen(
                         val linkedInUrl = if (linkedIn.isBlank()) ""
                         else "https://www.linkedin.com/in/${linkedIn.trim()}"
 
+                        isSaving = true
+
                         viewModel.replaceContact(
                             fullName = fullName.trim(),
                             jobRole = jobRole.trim(),
@@ -772,7 +797,14 @@ fun AddContactScreen(
                             notes = notes.trim(),
                             imageUri = imageUris.firstOrNull()
                         ) {
-                            Toast.makeText(context, "Contact replaced", Toast.LENGTH_SHORT).show()
+                            isSaving = false
+
+                            Toast.makeText(
+                                context,
+                                "Contact replaced",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
                             showSaveToPhoneDialog = true
                         }
                     }
