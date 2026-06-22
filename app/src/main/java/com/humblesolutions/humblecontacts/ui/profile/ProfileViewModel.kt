@@ -1,5 +1,6 @@
 package com.humblesolutions.humblecontacts.ui.profile
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
@@ -16,29 +17,27 @@ class ProfileViewModel : ViewModel() {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-
         viewModelScope.launch {
-
             try {
-
-                // Delete all contacts
+                Log.d("DELETE_ACCOUNT", "Deleting contacts...")
                 contactRepository.deleteAllContacts()
 
-                // Delete user document
+                Log.d("DELETE_ACCOUNT", "Deleting user document...")
                 contactRepository.deleteUserDocument()
 
-                // Delete Firebase Authentication account
+                Log.d("DELETE_ACCOUNT", "Deleting auth account...")
                 authRepository.deleteCurrentUser()
+
+                Log.d("DELETE_ACCOUNT", "Finished")
 
                 onSuccess()
 
             } catch (e: Exception) {
-                android.util.Log.e("DELETE_ACCOUNT", "Delete failed", e)
+                Log.e("DELETE_ACCOUNT", "Delete failed", e)
 
                 when (e) {
                     is FirebaseAuthRecentLoginRequiredException ->
                         onError("REAUTH_REQUIRED")
-
                     else ->
                         onError(e.message ?: "Something went wrong")
                 }

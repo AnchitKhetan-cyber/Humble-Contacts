@@ -1,5 +1,7 @@
 package com.humblesolutions.humblecontacts.data.auth
 
+import android.util.Log
+import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
@@ -116,22 +118,16 @@ class AuthRepository {
     }
 
     suspend fun deleteCurrentUser() {
+        val user = auth.currentUser ?: throw Exception("Current user is null")
 
-        val user = auth.currentUser
-            ?: throw Exception("Current user is null")
-
-        android.util.Log.d("AUTH_DELETE", "Deleting user: ${user.uid}")
+        Log.d("AUTH_DELETE", "UID = ${user.uid}")
+        Log.d("AUTH_DELETE", "Email = ${user.email}")
 
         try {
-
             user.delete().await()
-
-            android.util.Log.d("AUTH_DELETE", "User deleted successfully")
-
+            Log.d("AUTH_DELETE", "User deleted")
         } catch (e: Exception) {
-
-            android.util.Log.e("AUTH_DELETE", "Delete failed", e)
-
+            Log.e("AUTH_DELETE", "Delete failed", e)
             throw e
         }
     }

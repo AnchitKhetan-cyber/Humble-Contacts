@@ -11,6 +11,7 @@ composeBom = "2024.09.00"
 animation = "1.11.0"
 kotlinxSerialization = "1.8.1"
 material3 = "1.4.0"
+firebaseFunctionsKtx = "22.1.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -30,6 +31,7 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "animation" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+firebase-functions-ktx = { group = "com.google.firebase", name = "firebase-functions-ktx", version.ref = "firebaseFunctionsKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
