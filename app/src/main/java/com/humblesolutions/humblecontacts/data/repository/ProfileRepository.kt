@@ -2,6 +2,7 @@ package com.humblesolutions.humblecontacts.data.repository
 
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.humblesolutions.humblecontacts.data.model.UserProfile
 import kotlinx.coroutines.tasks.await
@@ -26,6 +27,8 @@ class ProfileRepository {
     }
 
     suspend fun saveProfile(
+        name: String? = null,
+        email: String? = null,
         profession: String,
         company: String,
         countryCode: String,
@@ -37,15 +40,25 @@ class ProfileRepository {
 
         val firebaseUser = auth.currentUser ?: return
 
+        val resolvedName = name ?: firebaseUser.displayName ?: ""
+        val resolvedEmail = email ?: firebaseUser.email ?: ""
+
+        if (name != null && name.isNotBlank() && name != firebaseUser.displayName) {
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                .setDisplayName(name)
+                .build()
+            firebaseUser.updateProfile(profileUpdates).await()
+        }
+
         val existingProfile = getCurrentUserProfile()
 
         val profile = UserProfile(
 
             userId = firebaseUser.uid,
 
-            name = firebaseUser.displayName ?: "",
+            name = resolvedName,
 
-            email = firebaseUser.email ?: "",
+            email = resolvedEmail,
 
             profilePhotoUrl = firebaseUser.photoUrl?.toString() ?: "",
 

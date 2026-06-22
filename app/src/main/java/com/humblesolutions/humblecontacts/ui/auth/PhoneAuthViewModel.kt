@@ -10,6 +10,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
 import java.util.concurrent.TimeUnit
 
 class PhoneAuthViewModel : ViewModel() {
@@ -19,12 +20,17 @@ class PhoneAuthViewModel : ViewModel() {
     var state by mutableStateOf<AuthState>(AuthState.Idle)
         private set
 
+    var enteredName by mutableStateOf("")
+        private set
+
     private var storedVerificationId: String? = null
     private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
 
     // Kept so the UI can re-trigger with the same number
     private var lastActivity: Activity? = null
     private var lastPhoneNumber: String? = null
+
+    fun onNameChange(value: String) { enteredName = value }
 
     fun sendOtp(phoneNumber: String, activity: Activity) {
         lastActivity    = activity
@@ -53,8 +59,7 @@ class PhoneAuthViewModel : ViewModel() {
         val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 
             override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                // Auto-retrieval / instant verify (some Google-Play-certified devices)
-                signInWithCredential(credential)
+                // No-op: user must manually enter the OTP
             }
 
             override fun onVerificationFailed(e: FirebaseException) {
@@ -92,7 +97,19 @@ class PhoneAuthViewModel : ViewModel() {
     private fun signInWithCredential(credential: PhoneAuthCredential) {
         state = AuthState.Loading
         auth.signInWithCredential(credential)
-            .addOnSuccessListener { state = AuthState.Success }
+            .addOnSuccessListener { result ->
+                val name = enteredName.trim()
+                val user = result.user
+                if (user != null && name.isNotBlank()) {
+                    val updates = UserProfileChangeRequest.Builder()
+                        .setDisplayName(name)
+                        .build()
+                    user.updateProfile(updates)
+                        .addOnCompleteListener { state = AuthState.Success }
+                } else {
+                    state = AuthState.Success
+                }
+            }
             .addOnFailureListener { state = AuthState.Error(it.message ?: "Incorrect OTP. Please try again.") }
     }
 }

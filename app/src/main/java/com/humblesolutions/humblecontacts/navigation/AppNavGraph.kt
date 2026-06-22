@@ -44,13 +44,10 @@ import com.humblesolutions.humblecontacts.ui.introduction.IntroductionScreen
 import com.humblesolutions.humblecontacts.ui.profile.ProfileScreen
 import com.humblesolutions.humblecontacts.ui.splash.AnimatedSplashScreen
 import androidx.compose.animation.AnimatedContentScope
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
-import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
 import com.humblesolutions.humblecontacts.ui.profile.CompleteProfileScreen
 import com.humblesolutions.humblecontacts.ui.profile.DeleteAccountScreen
 import com.humblesolutions.humblecontacts.ui.profile.LinkedAccountsScreen
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
@@ -147,39 +144,14 @@ fun AppNavGraph(
 ) {
     val navController = rememberNavController()
 
-    val profileRepository = remember {
-        ProfileRepository()
-    }
-
     val context = LocalContext.current
-
-    val scope = rememberCoroutineScope()
 
     // Single source of truth for "go to Home after a successful sign-in", used by
     // Login, Register, and OTP verification alike.
     val navigateAfterAuthentication: () -> Unit = {
-
-        scope.launch {
-
-            val completed =
-                profileRepository.isProfileCompleted()
-
-            Log.d("PROFILE_CHECK", "completed = $completed")
-
-            val route =
-                if (completed)
-                    Routes.HOME
-                else
-                    Routes.COMPLETE_PROFILE
-
-            navController.navigate(route) {
-
-                popUpTo(0) {
-                    inclusive = true
-                }
-
-                launchSingleTop = true
-            }
+        navController.navigate(Routes.COMPLETE_PROFILE) {
+            popUpTo(0) { inclusive = true }
+            launchSingleTop = true
         }
     }
 
@@ -223,7 +195,10 @@ fun AppNavGraph(
 
                     } else {
 
-                        navigateAfterAuthentication()
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(0) { inclusive = true }
+                            launchSingleTop = true
+                        }
 
                     }
                 }

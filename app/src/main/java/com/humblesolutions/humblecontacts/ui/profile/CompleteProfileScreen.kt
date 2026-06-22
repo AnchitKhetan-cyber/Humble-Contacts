@@ -13,9 +13,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Business
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material3.Card
@@ -218,6 +220,11 @@ fun CompleteProfileScreen(
 
                                 } else {
 
+                                    val avatarLetter = if (uiState.isPhoneUser)
+                                        uiState.nameInput.take(1).uppercase()
+                                    else
+                                        uiState.name.take(1).uppercase()
+
                                     Box(
                                         modifier = Modifier
                                             .size(72.dp)
@@ -227,9 +234,7 @@ fun CompleteProfileScreen(
                                     ) {
 
                                         Text(
-                                            text = uiState.name
-                                                .take(1)
-                                                .uppercase(),
+                                            text = avatarLetter,
                                             style = MaterialTheme.typography.headlineMedium,
                                             color = MaterialTheme.colorScheme.onPrimary
                                         )
@@ -242,15 +247,25 @@ fun CompleteProfileScreen(
                                 Column {
 
                                     Text(
-                                        text = uiState.name,
+                                        text = if (uiState.isPhoneUser)
+                                            uiState.nameInput.ifBlank { "Your Name" }
+                                        else
+                                            uiState.name,
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (uiState.isPhoneUser && uiState.nameInput.isBlank())
+                                            MaterialTheme.colorScheme.outline
+                                        else
+                                            MaterialTheme.colorScheme.onSurface
                                     )
 
                                     Spacer(Modifier.height(4.dp))
 
                                     Text(
-                                        text = uiState.email,
+                                        text = if (uiState.isPhoneUser)
+                                            uiState.emailInput.ifBlank { "your@email.com" }
+                                        else
+                                            uiState.email,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.outline
                                     )
@@ -259,6 +274,48 @@ fun CompleteProfileScreen(
                         }
 
                         Spacer(Modifier.height(28.dp))
+
+                        // Name and email fields — shown only for phone-authenticated users
+                        if (uiState.isPhoneUser) {
+
+                            FieldLabel("Full Name *")
+
+                            HumbleTextField(
+                                value = uiState.nameInput,
+                                onValueChange = viewModel::onNameInputChange,
+                                placeholder = "John Doe",
+                                leadingIcon = Icons.Outlined.Person,
+                                keyboardType = KeyboardType.Text,
+                                capitalization = KeyboardCapitalization.Words,
+                                imeAction = ImeAction.Next,
+                                isError = uiState.nameError != null,
+                                errorMessage = uiState.nameError,
+                                keyboardActions = KeyboardActions(
+                                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                )
+                            )
+
+                            Spacer(Modifier.height(16.dp))
+
+                            FieldLabel("Email *")
+
+                            HumbleTextField(
+                                value = uiState.emailInput,
+                                onValueChange = viewModel::onEmailInputChange,
+                                placeholder = "you@example.com",
+                                leadingIcon = Icons.Outlined.Email,
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next,
+                                isError = uiState.emailError != null,
+                                errorMessage = uiState.emailError,
+                                keyboardActions = KeyboardActions(
+                                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                )
+                            )
+
+                            Spacer(Modifier.height(16.dp))
+
+                        }
 
                         // Profession
                         FieldLabel("Profession *")

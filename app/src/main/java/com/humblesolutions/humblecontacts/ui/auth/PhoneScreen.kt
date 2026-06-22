@@ -23,10 +23,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
@@ -53,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -177,17 +181,40 @@ fun PhoneInputScreen(
                         onDismiss = { viewModel.clearError() }
                     )
 
+                    FieldLabel("Full Name *")
+
+                    HumbleTextField(
+                        value          = viewModel.enteredName,
+                        onValueChange  = viewModel::onNameChange,
+                        placeholder    = "John Doe",
+                        leadingIcon    = Icons.Outlined.Person,
+                        keyboardType   = KeyboardType.Text,
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction      = ImeAction.Next,
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                        )
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
                     FieldLabel("Mobile Number")
 
                     PhoneNumberField(
                         value         = phone,
-                        onValueChange = {
-                            if (it.all { c -> c.isDigit() } && it.length <= 10) phone = it
+                        onValueChange = { input ->
+                            val digits = input.filter { it.isDigit() }
+                            val number = when {
+                                digits.length > 10 && digits.startsWith("91") -> digits.drop(2)
+                                digits.length > 10 && digits.startsWith("0")  -> digits.drop(1)
+                                else -> digits
+                            }.take(10)
+                            phone = number
                         },
                         isError       = state is AuthState.Error,
                         onDone        = {
                             focusManager.clearFocus()
-                            if (phone.length == 10)
+                            if (viewModel.enteredName.isNotBlank() && phone.length == 10)
                                 viewModel.sendOtp("+91$phone", context as Activity)
                         }
                     )
@@ -210,7 +237,7 @@ fun PhoneInputScreen(
                             viewModel.sendOtp("+91$phone", context as Activity)
                         },
                         isLoading = state is AuthState.Loading,
-                        enabled   = phone.length == 10 && state !is AuthState.Loading
+                        enabled   = viewModel.enteredName.isNotBlank() && phone.length == 10 && state !is AuthState.Loading
                     )
 
                     Spacer(Modifier.height(20.dp))
@@ -241,6 +268,7 @@ fun OtpVerifyScreen(
     onSuccess: () -> Unit,
     viewModel: PhoneAuthViewModel = viewModel()
 ) {
+    val context      = LocalContext.current
     val dark         = isSystemInDarkTheme()
     val focusManager = LocalFocusManager.current
     val state        = viewModel.state
@@ -365,8 +393,6 @@ fun OtpVerifyScreen(
                         onValueChange = {
                             if (it.all { c -> c.isDigit() } && it.length <= 6) {
                                 otp = it
-                                // Auto-submit when all 6 digits are entered
-                                if (it.length == 6) viewModel.verifyOtp(it)
                             }
                         },
                         isError   = state is AuthState.Error,
@@ -398,7 +424,6 @@ fun OtpVerifyScreen(
                         Spacer(Modifier.width(4.dp))
                         if (canResend) {
                             TextButton(onClick = {
-                                // Reset and trigger resend
                                 otp       = ""
                                 countdown = 30
                                 canResend = false
@@ -635,3 +660,4 @@ fun OtpBoxRow(
         }
     }
 }
+

@@ -3,6 +3,7 @@ package com.humblesolutions.humblecontacts.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
 import com.humblesolutions.humblecontacts.ui.auth.CountryCode
 import com.humblesolutions.humblecontacts.ui.auth.countryCodes
@@ -31,21 +32,31 @@ class CompleteProfileViewModel(
     private fun loadProfile() {
         viewModelScope.launch {
             try {
-                val profile = repository.getCurrentUserProfile() ?: return@launch
+                val firebaseUser = FirebaseAuth.getInstance().currentUser
+                val isPhoneUser = firebaseUser?.providerData
+                    ?.any { it.providerId == "phone" } == true
+
+                val profile = repository.getCurrentUserProfile()
 
                 _uiState.update {
                     it.copy(
-                        photoUrl = profile.profilePhotoUrl,
-                        name = profile.name,
-                        email = profile.email,
-                        profession = profile.profession,
-                        company = profile.company,
-                        countryCode = countryCodes.firstOrNull { c -> c.dialCode == profile.countryCode }
-                            ?: countryCodes.first { c -> c.dialCode == "+91" },
-                        phone = profile.phone,
-                        linkedInUrl = profile.linkedInUrl,
-                        address = profile.address,
-                        bio = profile.bio
+                        photoUrl    = profile?.profilePhotoUrl ?: firebaseUser?.photoUrl?.toString() ?: "",
+                        name        = profile?.name ?: firebaseUser?.displayName ?: "",
+                        email       = profile?.email ?: firebaseUser?.email ?: "",
+                        isPhoneUser = isPhoneUser,
+                        nameInput   = profile?.name?.takeIf { n -> n.isNotBlank() }
+                            ?: firebaseUser?.displayName ?: "",
+                        emailInput  = profile?.email?.takeIf { e -> e.isNotBlank() }
+                            ?: firebaseUser?.email ?: "",
+                        profession  = profile?.profession ?: "",
+                        company     = profile?.company ?: "",
+                        countryCode = profile?.countryCode?.let { dc ->
+                            countryCodes.firstOrNull { c -> c.dialCode == dc }
+                        } ?: countryCodes.first { c -> c.dialCode == "+91" },
+                        phone       = profile?.phone ?: "",
+                        linkedInUrl = profile?.linkedInUrl ?: "",
+                        address     = profile?.address ?: "",
+                        bio         = profile?.bio ?: ""
                     )
                 }
 
@@ -54,6 +65,18 @@ class CompleteProfileViewModel(
                     it.copy(errorMessage = e.message ?: "Unable to load profile.")
                 }
             }
+        }
+    }
+
+    fun onNameInputChange(value: String) {
+        _uiState.update {
+            it.copy(nameInput = value, nameError = null)
+        }
+    }
+
+    fun onEmailInputChange(value: String) {
+        _uiState.update {
+            it.copy(emailInput = value, emailError = null)
         }
     }
 
@@ -125,8 +148,22 @@ class CompleteProfileViewModel(
         if (_uiState.value.isLoading) return
         val state = _uiState.value
 
+        var nameError: String? = null
+        var emailError: String? = null
         var professionError: String? = null
         var phoneError: String? = null
+
+        if (state.isPhoneUser) {
+            when {
+                state.nameInput.isBlank() -> nameError = "Name is required."
+                state.nameInput.trim().length < 2 -> nameError = "Name is too short."
+            }
+            when {
+                state.emailInput.isBlank() -> emailError = "Email is required."
+                !android.util.Patterns.EMAIL_ADDRESS.matcher(state.emailInput.trim()).matches() ->
+                    emailError = "Enter a valid email address."
+            }
+        }
 
         when {
 
@@ -146,9 +183,11 @@ class CompleteProfileViewModel(
                 phoneError = "Enter a valid 10-digit phone number."
         }
 
-        if (professionError != null || phoneError != null) {
+        if (nameError != null || emailError != null || professionError != null || phoneError != null) {
             _uiState.update {
                 it.copy(
+                    nameError = nameError,
+                    emailError = emailError,
                     professionError = professionError,
                     phoneError = phoneError
                 )
@@ -174,6 +213,8 @@ class CompleteProfileViewModel(
                 }
 
                 repository.saveProfile(
+                    name = if (state.isPhoneUser) state.nameInput.trim() else null,
+                    email = if (state.isPhoneUser) state.emailInput.trim() else null,
                     profession = state.profession.trim(),
                     company = state.company.trim(),
                     countryCode = state.countryCode.dialCode,

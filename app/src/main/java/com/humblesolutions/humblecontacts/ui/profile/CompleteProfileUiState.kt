@@ -5,10 +5,17 @@ import com.humblesolutions.humblecontacts.ui.auth.countryCodes
 
 data class CompleteProfileUiState(
 
-    // Google account information
+    // Account information (read-only for non-phone users)
     val photoUrl: String = "",
     val name: String = "",
     val email: String = "",
+
+    // Phone-user identity fields (editable when isPhoneUser = true)
+    val isPhoneUser: Boolean = false,
+    val nameInput: String = "",
+    val emailInput: String = "",
+    val nameError: String? = null,
+    val emailError: String? = null,
 
     // Editable fields
     val profession: String = "",
