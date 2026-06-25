@@ -234,15 +234,6 @@ fun ProfileScreen(
                         subtitle = "Update your information",
                         onClick = onNavigateToEditProfile
                     )
-                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
-                    SettingsRow(
-                        icon     = Icons.Outlined.Link,
-                        iconBg   = MaterialTheme.colorScheme.primaryContainer,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title    = "Linked Accounts",
-                        subtitle = "Google, LinkedIn",
-                        onClick = onNavigateToLinkedAccounts
-                    )
                 }
 
                 Spacer(Modifier.height(16.dp))
