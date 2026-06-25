@@ -5,6 +5,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.humblesolutions.humblecontacts.MainActivity
@@ -18,6 +20,12 @@ object NotificationHelper {
     fun createChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+        val soundUri = Settings.System.DEFAULT_NOTIFICATION_URI
+        val audioAttr = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
         nm.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_REMINDERS,
@@ -25,6 +33,9 @@ object NotificationHelper {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Reminders to follow up with your contacts"
+                setSound(soundUri, audioAttr)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 150, 250)
             }
         )
 
@@ -32,9 +43,12 @@ object NotificationHelper {
             NotificationChannel(
                 CHANNEL_GENERAL,
                 "General",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "General app notifications"
+                setSound(soundUri, audioAttr)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 150, 250)
             }
         )
     }
@@ -59,6 +73,7 @@ object NotificationHelper {
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
             .setContentIntent(pi)
             .build()
@@ -91,7 +106,8 @@ object NotificationHelper {
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
             .setContentIntent(pi)
             .build()
