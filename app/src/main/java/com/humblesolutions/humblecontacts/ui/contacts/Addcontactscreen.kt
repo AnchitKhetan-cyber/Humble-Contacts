@@ -105,7 +105,12 @@ fun AddContactScreen(
         jobRole = extractedContact.designation
         company = extractedContact.company
         email = extractedContact.email
-        phone = extractedContact.phone.filter(Char::isDigit)
+        val rawPhone = extractedContact.phone.filter(Char::isDigit)
+        phone = when {
+            rawPhone.length > 10 && rawPhone.startsWith("91") -> rawPhone.drop(2)
+            rawPhone.length > 10 && rawPhone.startsWith("0")  -> rawPhone.drop(1)
+            else -> rawPhone
+        }.take(10)
         linkedIn = extractedContact.linkedin
         address = extractedContact.address
     }
@@ -567,8 +572,13 @@ fun AddContactScreen(
 
                         OutlinedTextField(
                             value = phone,
-                            onValueChange = {
-                                phone = it.filter(Char::isDigit)
+                            onValueChange = { input ->
+                                val digits = input.filter(Char::isDigit)
+                                phone = when {
+                                    digits.length > 10 && digits.startsWith("91") -> digits.drop(2)
+                                    digits.length > 10 && digits.startsWith("0")  -> digits.drop(1)
+                                    else -> digits
+                                }.take(10)
                             },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions(
