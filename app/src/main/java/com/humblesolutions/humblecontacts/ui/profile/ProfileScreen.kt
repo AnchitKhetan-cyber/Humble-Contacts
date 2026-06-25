@@ -501,12 +501,12 @@ private fun QrIconCard(
     account: LinkedAccount,
     onClick: () -> Unit
 ) {
-    val drawableRes = when (account.title) {
-        "WhatsApp" -> R.drawable.ic_whatsapp
-        "LinkedIn" -> R.drawable.ic_linkedin
-        "Phone"    -> R.drawable.ic_phone_qr
-        "Email"    -> R.drawable.ic_email_qr
-        else       -> null
+    val (icon, bg, tint) = when (account.title) {
+        "Phone"    -> Triple(Icons.Outlined.Call,         Color(0xFFE8F5E9), Color(0xFF2E7D32))
+        "Email"    -> Triple(Icons.Outlined.Email,        Color(0xFFE3F2FD), Color(0xFF1565C0))
+        "WhatsApp" -> Triple(Icons.Outlined.PhoneAndroid, Color(0xFFE8F5E9), Color(0xFF1B5E20))
+        "LinkedIn" -> Triple(Icons.Outlined.Link,         Color(0xFFE3F2FD), Color(0xFF0D47A1))
+        else       -> Triple(Icons.Outlined.Link,         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     Box(
@@ -514,31 +514,16 @@ private fun QrIconCard(
             .size(56.dp)
             .shadow(3.dp, CircleShape)
             .clip(CircleShape)
+            .background(bg)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        if (drawableRes != null) {
-            Icon(
-                painter            = painterResource(drawableRes),
-                contentDescription = account.title,
-                tint               = Color.Unspecified,
-                modifier           = Modifier.fillMaxSize()
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector        = Icons.Outlined.Link,
-                    contentDescription = account.title,
-                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier           = Modifier.size(26.dp)
-                )
-            }
-        }
+        Icon(
+            imageVector        = icon,
+            contentDescription = account.title,
+            tint               = tint,
+            modifier           = Modifier.size(26.dp)
+        )
     }
 }
 
