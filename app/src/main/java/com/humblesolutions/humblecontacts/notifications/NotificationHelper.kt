@@ -66,6 +66,12 @@ object NotificationHelper {
         NotificationManagerCompat.from(context).notify(id, notification)
     }
 
+    fun notifyAction(
+        context: Context,
+        title: String,
+        body: String
+    ) = showGeneralNotification(context, (title + body).hashCode(), title, body)
+
     fun showGeneralNotification(
         context: Context,
         id: Int,

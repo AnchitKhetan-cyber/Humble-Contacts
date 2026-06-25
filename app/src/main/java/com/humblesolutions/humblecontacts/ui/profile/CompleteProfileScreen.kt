@@ -1,6 +1,8 @@
 package com.humblesolutions.humblecontacts.ui.profile
 
+import android.app.Application
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -64,7 +66,9 @@ fun CompleteProfileScreen(
     onNavigateHome: () -> Unit = {},
     onNavigateBack: () -> Unit = {},
     viewModel: CompleteProfileViewModel = viewModel(
-        factory = CompleteProfileViewModel.Factory()
+        factory = CompleteProfileViewModel.Factory(
+            LocalContext.current.applicationContext as Application
+        )
     )
 ){
 

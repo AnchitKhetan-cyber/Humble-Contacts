@@ -1,6 +1,7 @@
 // ui/contacts/ContactViewModel.kt
 package com.humblesolutions.humblecontacts.ui.contacts
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -8,18 +9,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.data.model.ContactNote
 import com.humblesolutions.humblecontacts.data.repository.ContactRepository
+import com.humblesolutions.humblecontacts.notifications.NotificationHelper
 import com.humblesolutions.humblecontacts.utils.ContactExporter
 import kotlinx.coroutines.launch
 import com.google.firebase.Timestamp
 import com.humblesolutions.humblecontacts.utils.GeminiError
-import okhttp3.Address
 
-class ContactViewModel : ViewModel() {
+class ContactViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = ContactRepository()
 
     var contacts by mutableStateOf<List<Contact>>(emptyList())
@@ -39,12 +40,18 @@ class ContactViewModel : ViewModel() {
     }
 
     fun deleteContact(contact: Contact) {
-        viewModelScope.launch { repo.deleteContact(contact.contactId) }
+        viewModelScope.launch {
+            repo.deleteContact(contact.contactId)
+            NotificationHelper.notifyAction(
+                getApplication(),
+                "Contact Deleted",
+                "${contact.fullName} has been removed from your contacts."
+            )
+        }
     }
 
     fun refreshContacts() {
         isLoading = true
-
         repo.getContactsRealtime { result ->
             contacts = result
             isLoading = false
@@ -57,11 +64,8 @@ class ContactViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
-
             try {
-
                 val contact = BusinessCardParser.parse(ocrText)
-
                 if (
                     contact.name.isBlank() &&
                     contact.company.isBlank() &&
@@ -69,19 +73,12 @@ class ContactViewModel : ViewModel() {
                     contact.email.isBlank() &&
                     contact.linkedin.isBlank()
                 ) {
-                    onError(
-                        "No contact details could be extracted. Please try a clearer image."
-                    )
+                    onError("No contact details could be extracted. Please try a clearer image.")
                     return@launch
                 }
-
                 onResult(contact)
-
             } catch (e: Exception) {
-
-                onError(
-                    GeminiError.getMessage(e)
-                )
+                onError(GeminiError.getMessage(e))
             }
         }
     }
@@ -99,7 +96,6 @@ class ContactViewModel : ViewModel() {
         onResult: (Boolean) -> Unit
     ) {
         viewModelScope.launch {
-
             val contact = Contact(
                 fullName = fullName,
                 jobRole = jobRole,
@@ -110,21 +106,21 @@ class ContactViewModel : ViewModel() {
                 address = address,
                 businessCardImage = imageUri?.toString() ?: "",
                 conversationNotes =
-                    if (notes.isBlank()) {
-                        emptyList()
-                    } else {
-                        listOf(
-                            ContactNote(
-                                text = notes.trim(),
-                                createdAt = Timestamp.now()
-                            )
-                        )
-                    },
+                    if (notes.isBlank()) emptyList()
+                    else listOf(ContactNote(text = notes.trim(), createdAt = Timestamp.now())),
                 meetingDate = Timestamp.now(),
                 entryMethod = "business_card"
             )
 
             val added = repo.addContact(contact)
+
+            if (added) {
+                NotificationHelper.notifyAction(
+                    getApplication(),
+                    "Contact Added!",
+                    "$fullName has been added to your contacts."
+                )
+            }
 
             onResult(added)
         }
@@ -134,18 +130,16 @@ class ContactViewModel : ViewModel() {
         searchQuery: String,
         selectedFilter: String
     ): List<Contact> {
-
         return contacts.filter { contact ->
-
             val matchesSearch =
                 searchQuery.isBlank() ||
-                        contact.fullName.contains(searchQuery, ignoreCase = true) ||
-                        contact.company.contains(searchQuery, ignoreCase = true) ||
-                        contact.jobRole.contains(searchQuery, ignoreCase = true)
+                    contact.fullName.contains(searchQuery, ignoreCase = true) ||
+                    contact.company.contains(searchQuery, ignoreCase = true) ||
+                    contact.jobRole.contains(searchQuery, ignoreCase = true)
 
             val matchesFilter = when (selectedFilter) {
                 "All" -> true
-                else -> true
+                else  -> true
             }
 
             matchesSearch && matchesFilter

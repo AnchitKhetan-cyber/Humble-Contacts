@@ -1,10 +1,12 @@
 package com.humblesolutions.humblecontacts.ui.profile
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
+import com.humblesolutions.humblecontacts.notifications.NotificationHelper
 import com.humblesolutions.humblecontacts.ui.auth.CountryCode
 import com.humblesolutions.humblecontacts.ui.auth.countryCodes
 import kotlinx.coroutines.channels.Channel
@@ -16,8 +18,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class CompleteProfileViewModel(
+    application: Application,
     private val repository: ProfileRepository
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(CompleteProfileUiState())
     val uiState: StateFlow<CompleteProfileUiState> = _uiState.asStateFlow()
@@ -228,6 +231,12 @@ class CompleteProfileViewModel(
                     bio = state.bio.trim()
                 )
 
+                NotificationHelper.notifyAction(
+                    getApplication(),
+                    "Profile Saved!",
+                    "Your profile has been completed successfully."
+                )
+
                 _events.send(CompleteProfileEvent.NavigateHome)
 
             } catch (e: Exception) {
@@ -300,6 +309,12 @@ class CompleteProfileViewModel(
                     bio = state.bio
                 )
 
+                NotificationHelper.notifyAction(
+                    getApplication(),
+                    "Profile Updated!",
+                    "Your profile changes have been saved."
+                )
+
                 _events.send(CompleteProfileEvent.NavigateHome)
 
             } catch (e: Exception) {
@@ -319,12 +334,13 @@ class CompleteProfileViewModel(
 
     companion object {
 
-        fun Factory(): ViewModelProvider.Factory =
+        fun Factory(application: Application): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
 
                 @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                     return CompleteProfileViewModel(
+                        application,
                         ProfileRepository()
                     ) as T
                 }
