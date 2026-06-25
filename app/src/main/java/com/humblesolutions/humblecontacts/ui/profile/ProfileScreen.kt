@@ -501,6 +501,14 @@ private fun QrIconCard(
     account: LinkedAccount,
     onClick: () -> Unit
 ) {
+    val drawableRes = when (account.title) {
+        "WhatsApp" -> R.drawable.ic_whatsapp
+        "LinkedIn" -> R.drawable.ic_linkedin
+        "Phone"    -> R.drawable.ic_phone_qr
+        "Email"    -> R.drawable.ic_email_qr
+        else       -> null
+    }
+
     Box(
         modifier = Modifier
             .size(56.dp)
@@ -509,31 +517,24 @@ private fun QrIconCard(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        if (account.title == "WhatsApp") {
-            // Full-bleed WhatsApp branded icon (green bg + white logo built into drawable)
+        if (drawableRes != null) {
             Icon(
-                painter           = painterResource(R.drawable.ic_whatsapp),
-                contentDescription = "WhatsApp",
+                painter            = painterResource(drawableRes),
+                contentDescription = account.title,
                 tint               = Color.Unspecified,
                 modifier           = Modifier.fillMaxSize()
             )
         } else {
-            val (icon, bg, tint) = when (account.title) {
-                "Phone"    -> Triple(Icons.Outlined.Call,  Color(0xFFE8F5E9), Color(0xFF2E7D32))
-                "Email"    -> Triple(Icons.Outlined.Email, Color(0xFFE3F2FD), Color(0xFF1565C0))
-                "LinkedIn" -> Triple(Icons.Outlined.Link,  Color(0xFFE3F2FD), Color(0xFF0D47A1))
-                else       -> Triple(Icons.Outlined.Link,  MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(bg),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector        = icon,
+                    imageVector        = Icons.Outlined.Link,
                     contentDescription = account.title,
-                    tint               = tint,
+                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier           = Modifier.size(26.dp)
                 )
             }
