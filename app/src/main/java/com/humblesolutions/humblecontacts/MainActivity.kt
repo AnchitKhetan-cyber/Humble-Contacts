@@ -1,6 +1,7 @@
 package com.humblesolutions.humblecontacts
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,7 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
-import com.google.firebase.auth.FirebaseAuth
+import androidx.core.content.ContextCompat
 import com.humblesolutions.humblecontacts.navigation.AppNavGraph
 import com.humblesolutions.humblecontacts.navigation.Routes
 import com.humblesolutions.humblecontacts.notifications.NotificationHelper
@@ -28,11 +29,6 @@ class MainActivity : ComponentActivity() {
 
         // Create notification channels (safe to call multiple times)
         NotificationHelper.createChannels(this)
-
-        // Request POST_NOTIFICATIONS on Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
 
         setContent {
             val systemDark = isSystemInDarkTheme()
@@ -55,6 +51,22 @@ class MainActivity : ComponentActivity() {
                     darkMode = darkMode,
                     onDarkModeChange = { darkMode = it }
                 )
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        requestNotificationPermissionIfNeeded()
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
