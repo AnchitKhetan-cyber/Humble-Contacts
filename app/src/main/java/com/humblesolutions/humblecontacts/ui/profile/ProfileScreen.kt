@@ -13,11 +13,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.material3.ButtonColors
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
 import com.humblesolutions.humblecontacts.ui.home.HomeViewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
@@ -70,12 +73,26 @@ fun ProfileScreen(
 
     val profileViewModel: ProfileViewModel = viewModel()
 
-    var showDeleteDialog by remember {
-        mutableStateOf(false)
-    }
+    var showDeleteDialog  by remember { mutableStateOf(false) }
+    var showLogoutDialog  by remember { mutableStateOf(false) }
+    var selectedQrAccount by remember { mutableStateOf<LinkedAccount?>(null) }
+    val qrAccounts = remember { mutableStateListOf<LinkedAccount>() }
 
-    var showLogoutDialog by remember {
-        mutableStateOf(false)
+    LaunchedEffect(Unit) {
+        val repo    = ProfileRepository()
+        val profile = repo.getCurrentUserProfile()
+        qrAccounts.clear()
+        if (profile != null) {
+            if (profile.phone.isNotBlank()) {
+                val full = "${profile.countryCode}${profile.phone}"
+                qrAccounts.add(LinkedAccount("Phone", full))
+                qrAccounts.add(LinkedAccount("WhatsApp", full))
+            }
+            if (profile.email.isNotBlank())
+                qrAccounts.add(LinkedAccount("Email", profile.email))
+            if (profile.linkedInUrl.isNotBlank())
+                qrAccounts.add(LinkedAccount("LinkedIn", profile.linkedInUrl))
+        }
     }
 
     val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState()
@@ -174,6 +191,32 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.outlineVariant
                         )
                         ProfileStat(value = viewModel.uniqueEventsCount.toString(), label = "Events")
+                    }
+                }
+            }
+
+            // ── QR icon cards ─────────────────────────────────────────────────
+            if (qrAccounts.isNotEmpty()) {
+                Spacer(Modifier.height(20.dp))
+
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Text(
+                        "MY QR CODES",
+                        fontSize      = 12.sp,
+                        fontWeight    = FontWeight.SemiBold,
+                        color         = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 0.8.sp
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        qrAccounts.forEach { account ->
+                            QrIconCard(
+                                account = account,
+                                onClick = { selectedQrAccount = account }
+                            )
+                        }
                     }
                 }
             }
@@ -449,6 +492,55 @@ fun ProfileScreen(
 
             }
 
+        )
+    }
+
+    selectedQrAccount?.let { account ->
+        QrCodeDialog(account = account, onDismiss = { selectedQrAccount = null })
+    }
+}
+
+
+// ─── QR Icon Card ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun QrIconCard(
+    account: LinkedAccount,
+    onClick: () -> Unit
+) {
+    val (icon, bg, tint) = when (account.title) {
+        "Phone"    -> Triple(Icons.Outlined.Call,         Color(0xFFE8F5E9), Color(0xFF2E7D32))
+        "Email"    -> Triple(Icons.Outlined.Email,        Color(0xFFE3F2FD), Color(0xFF1565C0))
+        "WhatsApp" -> Triple(Icons.Outlined.PhoneAndroid, Color(0xFFE8F5E9), Color(0xFF1B5E20))
+        "LinkedIn" -> Triple(Icons.Outlined.Link,         Color(0xFFE3F2FD), Color(0xFF0D47A1))
+        else       -> Triple(Icons.Outlined.Link,         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .shadow(3.dp, CircleShape)
+                .clip(CircleShape)
+                .background(bg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector        = icon,
+                contentDescription = account.title,
+                tint               = tint,
+                modifier           = Modifier.size(26.dp)
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            account.title,
+            fontSize   = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color      = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

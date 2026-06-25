@@ -69,7 +69,7 @@ data class LinkedAccount(
  * scanning the code with any standard QR scanner will redirect straight to
  * the relevant action (dialer, email composer, WhatsApp chat, or web page).
  */
-private fun qrContentFor(account: LinkedAccount): String {
+fun qrContentFor(account: LinkedAccount): String {
     return when (account.title) {
         "Phone" -> "tel:${account.value}"
         "Email" -> "mailto:${account.value}"
@@ -91,7 +91,7 @@ private fun qrContentFor(account: LinkedAccount): String {
     }
 }
 
-private fun generateQrBitmap(content: String, sizePx: Int): Bitmap {
+fun generateQrBitmap(content: String, sizePx: Int): Bitmap {
     val writer = QRCodeWriter()
     val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, sizePx, sizePx)
     val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.RGB_565)
@@ -242,7 +242,7 @@ fun LinkedAccountsScreen(
 }
 
 @Composable
-private fun QrCodeDialog(
+fun QrCodeDialog(
     account: LinkedAccount,
     onDismiss: () -> Unit
 ) {
@@ -310,7 +310,7 @@ private fun QrCodeDialog(
     )
 }
 
-private fun actionLabel(title: String): String = when (title) {
+fun actionLabel(title: String): String = when (title) {
     "Phone" -> "call this number"
     "Email" -> "send an email"
     "WhatsApp" -> "open WhatsApp chat"
