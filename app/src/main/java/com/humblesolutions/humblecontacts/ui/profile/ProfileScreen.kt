@@ -535,13 +535,6 @@ private fun QrIconCard(
                 modifier           = Modifier.size(26.dp)
             )
         }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            account.title,
-            fontSize   = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color      = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
