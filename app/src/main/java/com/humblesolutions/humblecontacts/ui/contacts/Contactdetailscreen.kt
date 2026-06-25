@@ -37,6 +37,7 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.storage
 import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.data.model.ContactNote
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
 import kotlinx.coroutines.launch
@@ -57,7 +58,8 @@ fun ContactDetailScreen(
     onNavigateToContacts: () -> Unit = {},
     onNavigateToScan:     () -> Unit = {},
     onNavigateToNfc:      () -> Unit = {},
-    onNavigateToProfile:  () -> Unit = {}
+    onNavigateToProfile:  () -> Unit = {},
+    contactViewModel:     ContactViewModel = viewModel()
 ) {
     // ── Load the real contact from Firestore ──────────────────────────────────
     var contact by remember { mutableStateOf<Contact?>(null) }
@@ -727,19 +729,9 @@ fun ContactDetailScreen(
                     onClick = {
 
                         contact?.let { contact ->
-
                             showDeleteDialog = false
-
-                            scope.launch {
-
-                                Firebase.firestore
-                                    .collection("contacts")
-                                    .document(contact.contactId)
-                                    .delete()
-                                    .await()
-
-                                onBack()
-                            }
+                            contactViewModel.deleteContact(contact)
+                            onBack()
                         }
                     }
                 ) {
