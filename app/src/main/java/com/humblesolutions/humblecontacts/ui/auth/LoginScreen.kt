@@ -1,6 +1,7 @@
 package com.humblesolutions.humblecontacts.ui.auth
 
 import android.app.Activity
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -158,6 +159,7 @@ fun LoginScreen(
             Card(
                 modifier  = Modifier.fillMaxWidth(),
                 shape     = RoundedCornerShape(28.dp),
+                border    = BorderStroke(1.5.dp, Gold400.copy(alpha = 0.6f)),
                 colors    = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -188,37 +190,30 @@ fun LoginScreen(
 
                     // ── Email field ────────────────────────────────────────────
                     FieldLabel("Email Address")
-                    HumbleTextField(
+                    HumbleInputField(
                         value         = uiState.email,
                         onValueChange = { viewModel.onEmailChange(it) },
                         placeholder   = "Enter Email",
                         leadingIcon   = Icons.Outlined.Email,
                         keyboardType  = KeyboardType.Email,
-                        // ImeAction.Next moves focus to the next field (Password)
-                        // when the user taps the "Next" key on the keyboard.
                         imeAction     = ImeAction.Next,
                         isError       = uiState.emailError != null,
-                        errorMessage  = uiState.emailError,
-
+                        errorMessage  = uiState.emailError
                     )
 
                     Spacer(Modifier.height(16.dp))
 
                     // ── Password field ─────────────────────────────────────────
                     FieldLabel("Password")
-                    HumbleTextField(
-                        value         = uiState.password,
-                        onValueChange = { viewModel.onPasswordChange(it) },
-                        placeholder   = "Enter Password",
-                        leadingIcon   = Icons.Outlined.Lock,
-                        keyboardType  = KeyboardType.Password,
-                        // ImeAction.Done on the last field — tapping it submits the form.
-                        imeAction     = ImeAction.Done,
-                        isError       = uiState.passwordError != null,
-                        errorMessage  = uiState.passwordError,
-                        // VisualTransformation.None shows the password in plain text.
-                        // PasswordVisualTransformation() replaces every character with a dot.
-                        // The toggle button below switches between the two.
+                    HumbleInputField(
+                        value                = uiState.password,
+                        onValueChange        = { viewModel.onPasswordChange(it) },
+                        placeholder          = "Enter Password",
+                        leadingIcon          = Icons.Outlined.Lock,
+                        keyboardType         = KeyboardType.Password,
+                        imeAction            = ImeAction.Done,
+                        isError              = uiState.passwordError != null,
+                        errorMessage         = uiState.passwordError,
                         visualTransformation = if (uiState.passwordVisible)
                             VisualTransformation.None
                         else
@@ -226,7 +221,7 @@ fun LoginScreen(
                         trailingIcon = {
                             IconButton(onClick = { viewModel.togglePasswordVisibility() }) {
                                 Icon(
-                                    imageVector = if (uiState.passwordVisible)
+                                    imageVector        = if (uiState.passwordVisible)
                                         Icons.Outlined.VisibilityOff
                                     else
                                         Icons.Outlined.Visibility,
@@ -317,13 +312,13 @@ fun LoginScreen(
                             text = "Phone Number",
                             icon = {
                                 Icon(
-                                    imageVector = Icons.Outlined.Phone,
+                                    imageVector        = Icons.Outlined.Phone,
                                     contentDescription = "Phone Login",
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(18.dp)
+                                    tint               = Gold400,
+                                    modifier           = Modifier.size(18.dp)
                                 )
                             },
-                            onClick = onNavigateToPhone,
+                            onClick  = onNavigateToPhone,
                             modifier = Modifier.weight(1f)
                         )
                     }

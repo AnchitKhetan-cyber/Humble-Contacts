@@ -1,6 +1,7 @@
 package com.humblesolutions.humblecontacts.ui.auth
 
 import android.app.Activity
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -50,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -64,12 +63,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.data.auth.GoogleSignInHelper
 import com.humblesolutions.humblecontacts.navigation.Routes
-import com.humblesolutions.humblecontacts.ui.theme.DarkBackground
-import com.humblesolutions.humblecontacts.ui.theme.DarkSurfaceVariant
 import com.humblesolutions.humblecontacts.ui.theme.Gold400
 import com.humblesolutions.humblecontacts.ui.theme.Navy600
 import com.humblesolutions.humblecontacts.ui.theme.Navy900
-import com.humblesolutions.humblecontacts.ui.theme.SurfaceVariant
 import com.humblesolutions.humblecontacts.ui.theme.TextOnNavy
 
 @Composable
@@ -176,6 +172,7 @@ fun RegisterScreen(
             Card(
                 modifier  = Modifier.fillMaxWidth(),
                 shape     = RoundedCornerShape(28.dp),
+                border    = BorderStroke(1.5.dp, Gold400.copy(alpha = 0.6f)),
                 colors    = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -203,90 +200,58 @@ fun RegisterScreen(
 
                     // ── Full Name ─────────────────────────────────────────────
                     FieldLabel("Full Name")
-                    HumbleTextField(
-                        value           = uiState.name,
-                        onValueChange   = { viewModel.onNameChange(it) },
-                        placeholder     = "Enter First and Last Name",
-                        leadingIcon     = Icons.Outlined.Person,
-                        keyboardType    = KeyboardType.Text,
-                        imeAction       = ImeAction.Next,
-                        isError         = uiState.nameError != null,
-                        errorMessage    = uiState.nameError,
-                        capitalization = KeyboardCapitalization.Words
+                    HumbleInputField(
+                        value          = uiState.name,
+                        onValueChange  = { viewModel.onNameChange(it) },
+                        placeholder    = "Enter First and Last Name",
+                        leadingIcon    = Icons.Outlined.Person,
+                        keyboardType   = KeyboardType.Text,
+                        imeAction      = ImeAction.Next,
+                        capitalization = KeyboardCapitalization.Words,
+                        isError        = uiState.nameError != null,
+                        errorMessage   = uiState.nameError
                     )
 
                     Spacer(Modifier.height(16.dp))
 
                     // ── Email ─────────────────────────────────────────────────
                     FieldLabel("Email Address")
-                    HumbleTextField(
-                        value           = uiState.email,
-                        onValueChange   = { viewModel.onEmailChange(it) },
-                        placeholder     = "Enter Email",
-                        leadingIcon     = Icons.Outlined.Email,
-                        keyboardType    = KeyboardType.Email,
-                        imeAction       = ImeAction.Next,
-                        isError         = uiState.emailError != null,
-                        errorMessage    = uiState.emailError
+                    HumbleInputField(
+                        value         = uiState.email,
+                        onValueChange = { viewModel.onEmailChange(it) },
+                        placeholder   = "Enter Email",
+                        leadingIcon   = Icons.Outlined.Email,
+                        keyboardType  = KeyboardType.Email,
+                        imeAction     = ImeAction.Next,
+                        isError       = uiState.emailError != null,
+                        errorMessage  = uiState.emailError
                     )
 
                     Spacer(Modifier.height(16.dp))
 
                     // ── Phone ─────────────────────────────────────────────────
                     FieldLabel("Phone Number(Optional)")
-                    Row(
-                        modifier              = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment     = Alignment.Top
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(80.dp)
-                                .height(54.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (dark) DarkSurfaceVariant else SurfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text  = "🇮🇳 +91",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        HumbleTextField(
-                            value           = uiState.phone,
-                            onValueChange   = { viewModel.onPhoneChange(it.filter(Char::isDigit)) },
-                            placeholder     = "Mobile Number",
-                            leadingIcon     = Icons.Outlined.Phone,
-                            keyboardType    = KeyboardType.Phone,
-                            imeAction       = ImeAction.Next,
-                            isError         = uiState.phoneError != null,
-                            errorMessage    = uiState.phoneError,
-                            modifier        = Modifier
-                                .weight(1f)
-                                .onFocusChanged { focusState ->
-                                    if (!focusState.isFocused) {
-                                        viewModel.onPhoneFocusLost()
-                                    }
-                                }
-                        )
-                    }
+                    PhoneNumberField(
+                        value         = uiState.phone,
+                        onValueChange = { viewModel.onPhoneChange(it.filter(Char::isDigit)) },
+                        isError       = uiState.phoneError != null,
+                        errorMessage  = uiState.phoneError,
+                        onFocusLost   = { viewModel.onPhoneFocusLost() }
+                    )
 
                     Spacer(Modifier.height(16.dp))
 
                     // ── Password ──────────────────────────────────────────────
                     FieldLabel("Password")
-                    HumbleTextField(
-                        value         = uiState.password,
-                        onValueChange = { viewModel.onPasswordChange(it) },
-                        placeholder   = "Enter Password",
-                        leadingIcon   = Icons.Outlined.Lock,
-                        keyboardType  = KeyboardType.Password,
-                        imeAction     = ImeAction.Next,
-                        isError       = uiState.passwordError != null,
-                        errorMessage  = uiState.passwordError,
+                    HumbleInputField(
+                        value                = uiState.password,
+                        onValueChange        = { viewModel.onPasswordChange(it) },
+                        placeholder          = "Enter Password",
+                        leadingIcon          = Icons.Outlined.Lock,
+                        keyboardType         = KeyboardType.Password,
+                        imeAction            = ImeAction.Next,
+                        isError              = uiState.passwordError != null,
+                        errorMessage         = uiState.passwordError,
                         visualTransformation = if (uiState.passwordVisible)
                             VisualTransformation.None
                         else
@@ -312,15 +277,15 @@ fun RegisterScreen(
 
                     // ── Confirm Password ──────────────────────────────────────
                     FieldLabel("Confirm Password")
-                    HumbleTextField(
-                        value         = uiState.confirmPassword,
-                        onValueChange = { viewModel.onConfirmPasswordChange(it) },
-                        placeholder   = "Re-enter Password",
-                        leadingIcon   = Icons.Outlined.Lock,
-                        keyboardType  = KeyboardType.Password,
-                        imeAction     = ImeAction.Done,
-                        isError       = uiState.confirmError != null,
-                        errorMessage  = uiState.confirmError,
+                    HumbleInputField(
+                        value                = uiState.confirmPassword,
+                        onValueChange        = { viewModel.onConfirmPasswordChange(it) },
+                        placeholder          = "Re-enter Password",
+                        leadingIcon          = Icons.Outlined.Lock,
+                        keyboardType         = KeyboardType.Password,
+                        imeAction            = ImeAction.Done,
+                        isError              = uiState.confirmError != null,
+                        errorMessage         = uiState.confirmError,
                         visualTransformation = if (uiState.confirmVisible)
                             VisualTransformation.None
                         else
@@ -437,9 +402,10 @@ fun RegisterScreen(
                             text     = "Phone Number",
                             icon     = {
                                 Icon(
-                                    imageVector = Icons.Outlined.Phone,
+                                    imageVector        = Icons.Outlined.Phone,
                                     contentDescription = "Phone",
-                                    tint = MaterialTheme.colorScheme.onSurface
+                                    tint               = Gold400,
+                                    modifier           = Modifier.size(18.dp)
                                 )
                             },
                             onClick  = onNavigateToPhone,

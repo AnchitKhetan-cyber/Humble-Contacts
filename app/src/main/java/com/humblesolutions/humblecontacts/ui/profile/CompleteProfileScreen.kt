@@ -1,6 +1,8 @@
 package com.humblesolutions.humblecontacts.ui.profile
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -8,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -53,7 +54,7 @@ import com.humblesolutions.humblecontacts.ui.auth.ErrorMessage
 import com.humblesolutions.humblecontacts.ui.auth.FieldLabel
 import com.humblesolutions.humblecontacts.ui.auth.HumbleButton
 import com.humblesolutions.humblecontacts.ui.auth.HumbleContactsLogo
-import com.humblesolutions.humblecontacts.ui.auth.HumbleTextField
+import com.humblesolutions.humblecontacts.ui.auth.HumbleInputField
 import com.humblesolutions.humblecontacts.ui.theme.Gold400
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -152,6 +153,7 @@ fun CompleteProfileScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(28.dp),
+                    border = BorderStroke(1.5.dp, Gold400.copy(alpha = 0.6f)),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
@@ -280,37 +282,33 @@ fun CompleteProfileScreen(
 
                             FieldLabel("Full Name *")
 
-                            HumbleTextField(
-                                value = uiState.nameInput,
-                                onValueChange = viewModel::onNameInputChange,
-                                placeholder = "John Doe",
-                                leadingIcon = Icons.Outlined.Person,
-                                keyboardType = KeyboardType.Text,
+                            HumbleInputField(
+                                value          = uiState.nameInput,
+                                onValueChange  = viewModel::onNameInputChange,
+                                placeholder    = "John Doe",
+                                leadingIcon    = Icons.Outlined.Person,
+                                keyboardType   = KeyboardType.Text,
                                 capitalization = KeyboardCapitalization.Words,
-                                imeAction = ImeAction.Next,
-                                isError = uiState.nameError != null,
-                                errorMessage = uiState.nameError,
-                                keyboardActions = KeyboardActions(
-                                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                                )
+                                imeAction      = ImeAction.Next,
+                                isError        = uiState.nameError != null,
+                                errorMessage   = uiState.nameError,
+                                onImeAction    = { focusManager.moveFocus(FocusDirection.Down) }
                             )
 
                             Spacer(Modifier.height(16.dp))
 
                             FieldLabel("Email *")
 
-                            HumbleTextField(
-                                value = uiState.emailInput,
+                            HumbleInputField(
+                                value         = uiState.emailInput,
                                 onValueChange = viewModel::onEmailInputChange,
-                                placeholder = "you@example.com",
-                                leadingIcon = Icons.Outlined.Email,
-                                keyboardType = KeyboardType.Email,
-                                imeAction = ImeAction.Next,
-                                isError = uiState.emailError != null,
-                                errorMessage = uiState.emailError,
-                                keyboardActions = KeyboardActions(
-                                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                                )
+                                placeholder   = "you@example.com",
+                                leadingIcon   = Icons.Outlined.Email,
+                                keyboardType  = KeyboardType.Email,
+                                imeAction     = ImeAction.Next,
+                                isError       = uiState.emailError != null,
+                                errorMessage  = uiState.emailError,
+                                onImeAction   = { focusManager.moveFocus(FocusDirection.Down) }
                             )
 
                             Spacer(Modifier.height(16.dp))
@@ -320,21 +318,17 @@ fun CompleteProfileScreen(
                         // Profession
                         FieldLabel("Profession *")
 
-                        HumbleTextField(
-                            value = uiState.profession,
-                            onValueChange = viewModel::onProfessionChange,
-                            placeholder = "Software Engineer",
-                            leadingIcon = Icons.Outlined.WorkOutline,
-                            keyboardType = KeyboardType.Text,
+                        HumbleInputField(
+                            value          = uiState.profession,
+                            onValueChange  = viewModel::onProfessionChange,
+                            placeholder    = "Software Engineer",
+                            leadingIcon    = Icons.Outlined.WorkOutline,
+                            keyboardType   = KeyboardType.Text,
                             capitalization = KeyboardCapitalization.Words,
-                            imeAction = ImeAction.Next,
-                            isError = uiState.professionError != null,
-                            errorMessage = uiState.professionError,
-                            keyboardActions = KeyboardActions(
-                                onNext = {
-                                    focusManager.moveFocus(FocusDirection.Down)
-                                }
-                            )
+                            imeAction      = ImeAction.Next,
+                            isError        = uiState.professionError != null,
+                            errorMessage   = uiState.professionError,
+                            onImeAction    = { focusManager.moveFocus(FocusDirection.Down) }
                         )
 
                         Spacer(Modifier.height(16.dp))
@@ -342,19 +336,15 @@ fun CompleteProfileScreen(
                         // Company
                         FieldLabel("Company")
 
-                        HumbleTextField(
-                            value = uiState.company,
-                            onValueChange = viewModel::onCompanyChange,
-                            placeholder = "Google",
-                            leadingIcon = Icons.Outlined.Business,
-                            keyboardType = KeyboardType.Text,
+                        HumbleInputField(
+                            value          = uiState.company,
+                            onValueChange  = viewModel::onCompanyChange,
+                            placeholder    = "Google",
+                            leadingIcon    = Icons.Outlined.Business,
+                            keyboardType   = KeyboardType.Text,
                             capitalization = KeyboardCapitalization.Words,
-                            imeAction = ImeAction.Next,
-                            keyboardActions = KeyboardActions(
-                                onNext = {
-                                    focusManager.moveFocus(FocusDirection.Down)
-                                }
-                            )
+                            imeAction      = ImeAction.Next,
+                            onImeAction    = { focusManager.moveFocus(FocusDirection.Down) }
                         )
 
                         Spacer(Modifier.height(16.dp))
@@ -368,27 +358,22 @@ fun CompleteProfileScreen(
                         ) {
 
                             CountryCodeDropdown(
-                                selectedCountry = uiState.countryCode,
+                                selectedCountry   = uiState.countryCode,
                                 onCountrySelected = viewModel::onCountryCodeChange
                             )
 
-                            Box(modifier = Modifier.weight(1f)) {
-                                HumbleTextField(
-                                    value = uiState.phone,
-                                    onValueChange = viewModel::onPhoneChange,
-                                    placeholder = "9876543210",
-                                    leadingIcon = Icons.Outlined.Phone,
-                                    keyboardType = KeyboardType.Phone,
-                                    imeAction = ImeAction.Next,
-                                    isError = uiState.phoneError != null,
-                                    errorMessage = uiState.phoneError,
-                                    keyboardActions = KeyboardActions(
-                                        onNext = {
-                                            focusManager.moveFocus(FocusDirection.Down)
-                                        }
-                                    )
-                                )
-                            }
+                            HumbleInputField(
+                                value         = uiState.phone,
+                                onValueChange = viewModel::onPhoneChange,
+                                placeholder   = "9876543210",
+                                leadingIcon   = Icons.Outlined.Phone,
+                                keyboardType  = KeyboardType.Phone,
+                                imeAction     = ImeAction.Next,
+                                isError       = uiState.phoneError != null,
+                                errorMessage  = uiState.phoneError,
+                                onImeAction   = { focusManager.moveFocus(FocusDirection.Down) },
+                                modifier      = Modifier.weight(1f)
+                            )
                         }
 
                         Spacer(Modifier.height(16.dp))
@@ -396,18 +381,14 @@ fun CompleteProfileScreen(
                         // LinkedIn
                         FieldLabel("LinkedIn")
 
-                        HumbleTextField(
-                            value = uiState.linkedInUrl,
+                        HumbleInputField(
+                            value         = uiState.linkedInUrl,
                             onValueChange = viewModel::onLinkedInChange,
-                            placeholder = "username",
-                            leadingIcon = Icons.Outlined.Link,
-                            keyboardType = KeyboardType.Uri,
-                            imeAction = ImeAction.Next,
-                            keyboardActions = KeyboardActions(
-                                onNext = {
-                                    focusManager.moveFocus(FocusDirection.Down)
-                                }
-                            )
+                            placeholder   = "username",
+                            leadingIcon   = Icons.Outlined.Link,
+                            keyboardType  = KeyboardType.Uri,
+                            imeAction     = ImeAction.Next,
+                            onImeAction   = { focusManager.moveFocus(FocusDirection.Down) }
                         )
 
                         Spacer(Modifier.height(16.dp))
@@ -415,19 +396,15 @@ fun CompleteProfileScreen(
                         // Address
                         FieldLabel("Address")
 
-                        HumbleTextField(
-                            value = uiState.address,
-                            onValueChange = viewModel::onAddressChange,
-                            placeholder = "Your Address",
-                            leadingIcon = Icons.Outlined.LocationOn,
-                            keyboardType = KeyboardType.Text,
+                        HumbleInputField(
+                            value          = uiState.address,
+                            onValueChange  = viewModel::onAddressChange,
+                            placeholder    = "Your Address",
+                            leadingIcon    = Icons.Outlined.LocationOn,
+                            keyboardType   = KeyboardType.Text,
                             capitalization = KeyboardCapitalization.Words,
-                            imeAction = ImeAction.Next,
-                            keyboardActions = KeyboardActions(
-                                onNext = {
-                                    focusManager.moveFocus(FocusDirection.Down)
-                                }
-                            )
+                            imeAction      = ImeAction.Next,
+                            onImeAction    = { focusManager.moveFocus(FocusDirection.Down) }
                         )
 
                         Spacer(Modifier.height(16.dp))
@@ -435,22 +412,18 @@ fun CompleteProfileScreen(
                         // Bio
                         FieldLabel("Bio")
 
-                        HumbleTextField(
-                            value = uiState.bio,
-                            onValueChange = viewModel::onBioChange,
-                            placeholder = "Tell people something about yourself...",
-                            leadingIcon = Icons.Outlined.Info,
-                            keyboardType = KeyboardType.Text,
+                        HumbleInputField(
+                            value          = uiState.bio,
+                            onValueChange  = viewModel::onBioChange,
+                            placeholder    = "Tell people something about yourself...",
+                            leadingIcon    = Icons.Outlined.Info,
+                            keyboardType   = KeyboardType.Text,
                             capitalization = KeyboardCapitalization.Sentences,
-                            singleLine = false,
-                            minLines = 4,
-                            maxLines = 5,
-                            imeAction = ImeAction.Done,
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    focusManager.clearFocus()
-                                }
-                            )
+                            singleLine     = false,
+                            minLines       = 4,
+                            maxLines       = 5,
+                            imeAction      = ImeAction.Done,
+                            onImeAction    = { focusManager.clearFocus() }
                         )
 
                         Spacer(Modifier.height(28.dp))

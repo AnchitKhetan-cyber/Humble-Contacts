@@ -1,11 +1,15 @@
 package com.humblesolutions.humblecontacts.ui.auth
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,7 +19,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.humblesolutions.humblecontacts.ui.theme.Gold400
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,32 +35,37 @@ fun CountryCodeDropdown(
     }
 
     Box {
-        Surface(
+        Row(
             modifier = Modifier
                 .width(90.dp)
-                .clickable {
-                    expanded = true
-                },
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 15.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(selectedCountry.dialCode)
-
-                Icon(
-                    imageVector = if (expanded)
-                        Icons.Default.KeyboardArrowUp
-                    else
-                        Icons.Default.KeyboardArrowDown,
-                    contentDescription = null
+                .height(56.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                    RoundedCornerShape(12.dp)
                 )
-            }
+                .clickable { expanded = true }
+                .padding(horizontal = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment     = Alignment.CenterVertically
+        ) {
+            Text(
+                text  = selectedCountry.dialCode,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Icon(
+                imageVector        = if (expanded)
+                    Icons.Default.KeyboardArrowUp
+                else
+                    Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint               = Gold400,
+                modifier           = Modifier.size(18.dp)
+            )
         }
 
         DropdownMenu(

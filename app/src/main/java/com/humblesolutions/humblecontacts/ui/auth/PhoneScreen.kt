@@ -1,6 +1,7 @@
 package com.humblesolutions.humblecontacts.ui.auth
 
 import android.app.Activity
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -105,20 +107,6 @@ fun PhoneInputScreen(
                 .background(Gold400.copy(alpha = if (dark) 0.08f else 0.05f))
         )
 
-        // ── Back button ───────────────────────────────────────────────────────
-        IconButton(
-            onClick  = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(top = 16.dp, start = 8.dp)
-        ) {
-            Icon(
-                imageVector        = Icons.AutoMirrored.Outlined.ArrowBack,
-                contentDescription = "Back",
-                tint               = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
         // ── Scrollable content ────────────────────────────────────────────────
         Column(
             modifier = Modifier
@@ -139,6 +127,7 @@ fun PhoneInputScreen(
             Card(
                 modifier  = Modifier.fillMaxWidth(),
                 shape     = RoundedCornerShape(28.dp),
+                border    = BorderStroke(1.5.dp, Gold400.copy(alpha = 0.6f)),
                 colors    = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -183,17 +172,11 @@ fun PhoneInputScreen(
 
                     FieldLabel("Full Name *")
 
-                    HumbleTextField(
-                        value          = viewModel.enteredName,
-                        onValueChange  = viewModel::onNameChange,
-                        placeholder    = "John Doe",
-                        leadingIcon    = Icons.Outlined.Person,
-                        keyboardType   = KeyboardType.Text,
-                        capitalization = KeyboardCapitalization.Words,
-                        imeAction      = ImeAction.Next,
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                        )
+                    NameTextField(
+                        value         = viewModel.enteredName,
+                        onValueChange = viewModel::onNameChange,
+                        isError       = state is AuthState.Error,
+                        onNext        = { focusManager.moveFocus(FocusDirection.Down) }
                     )
 
                     Spacer(Modifier.height(16.dp))
@@ -343,6 +326,7 @@ fun OtpVerifyScreen(
             Card(
                 modifier  = Modifier.fillMaxWidth(),
                 shape     = RoundedCornerShape(28.dp),
+                border    = BorderStroke(1.5.dp, Gold400.copy(alpha = 0.6f)),
                 colors    = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -482,16 +466,12 @@ fun OtpVerifyScreen(
 //  Reusable Components
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Outlined phone field with a fixed +91 🇮🇳 prefix pill.
- * Styled to match HumbleTextField's border/corner language.
- */
 @Composable
-fun PhoneNumberField(
+fun NameTextField(
     value: String,
     onValueChange: (String) -> Unit,
     isError: Boolean = false,
-    onDone: () -> Unit = {}
+    onNext: () -> Unit = {}
 ) {
     val borderColor = if (isError)
         MaterialTheme.colorScheme.error
@@ -503,30 +483,28 @@ fun PhoneNumberField(
             .fillMaxWidth()
             .height(56.dp)
             .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(1.dp, borderColor, RoundedCornerShape(12.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Country code pill
         Box(
             modifier = Modifier
-                .padding(start = 12.dp, end = 0.dp)
+                .padding(start = 12.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Gold400.copy(alpha = 0.10f))
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text  = "🇮🇳  +91",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = Gold400
+            Icon(
+                imageVector        = Icons.Outlined.Person,
+                contentDescription = null,
+                tint               = Gold400,
+                modifier           = Modifier.size(18.dp)
             )
         }
 
         Spacer(Modifier.width(8.dp))
 
-        // Vertical divider
         Box(
             modifier = Modifier
                 .width(1.dp)
@@ -534,7 +512,6 @@ fun PhoneNumberField(
                 .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
         )
 
-        // Number input
         BasicTextField(
             value           = value,
             onValueChange   = onValueChange,
@@ -547,16 +524,17 @@ fun PhoneNumberField(
             cursorBrush     = SolidColor(Gold400),
             singleLine      = true,
             keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Phone,
-                imeAction    = ImeAction.Done
+                keyboardType   = KeyboardType.Text,
+                imeAction      = ImeAction.Next,
+                capitalization = KeyboardCapitalization.Words
             ),
-            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                onDone = { onDone() }
+            keyboardActions = KeyboardActions(
+                onNext = { onNext() }
             ),
             decorationBox   = { innerTextField ->
                 if (value.isEmpty()) {
                     Text(
-                        text  = "98765 43210",
+                        text  = "John Doe",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
                     )
@@ -564,6 +542,106 @@ fun PhoneNumberField(
                 innerTextField()
             }
         )
+    }
+}
+
+/**
+ * Outlined phone field with a fixed +91 🇮🇳 prefix pill.
+ * Styled to match HumbleTextField's border/corner language.
+ */
+@Composable
+fun PhoneNumberField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    isError: Boolean = false,
+    onDone: () -> Unit = {},
+    onFocusLost: () -> Unit = {},
+    errorMessage: String? = null
+) {
+    val borderColor = if (isError)
+        MaterialTheme.colorScheme.error
+    else
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+
+    Column {
+        Row(
+            modifier          = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, borderColor, RoundedCornerShape(12.dp)),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Country code pill
+            Box(
+                modifier = Modifier
+                    .padding(start = 12.dp, end = 0.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Gold400.copy(alpha = 0.10f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text  = "🇮🇳  +91",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = Gold400
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            // Vertical divider
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(26.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            )
+
+            // Number input
+            BasicTextField(
+                value           = value,
+                onValueChange   = onValueChange,
+                modifier        = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 14.dp)
+                    .onFocusChanged { if (!it.isFocused) onFocusLost() },
+                textStyle       = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                cursorBrush     = SolidColor(Gold400),
+                singleLine      = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Phone,
+                    imeAction    = ImeAction.Done
+                ),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                    onDone = { onDone() }
+                ),
+                decorationBox   = { innerTextField ->
+                    if (value.isEmpty()) {
+                        Text(
+                            text  = "98765 43210",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+                        )
+                    }
+                    innerTextField()
+                }
+            )
+        }
+
+        if (isError && errorMessage != null) {
+            Text(
+                text     = errorMessage,
+                color    = MaterialTheme.colorScheme.error,
+                style    = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            )
+        }
     }
 }
 
