@@ -233,7 +233,15 @@ fun RegisterScreen(
                     FieldLabel("Phone Number(Optional)")
                     PhoneNumberField(
                         value         = uiState.phone,
-                        onValueChange = { viewModel.onPhoneChange(it.filter(Char::isDigit)) },
+                        onValueChange = { input ->
+                            val digits = input.filter(Char::isDigit)
+                            val sanitized = when {
+                                digits.length > 10 && digits.startsWith("91") -> digits.drop(2)
+                                digits.length > 10 && digits.startsWith("0")  -> digits.drop(1)
+                                else -> digits
+                            }.take(10)
+                            viewModel.onPhoneChange(sanitized)
+                        },
                         isError       = uiState.phoneError != null,
                         errorMessage  = uiState.phoneError,
                         onFocusLost   = { viewModel.onPhoneFocusLost() }

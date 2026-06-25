@@ -108,9 +108,15 @@ class CompleteProfileViewModel(
     }
 
     fun onPhoneChange(value: String) {
+        val digits = value.filter(Char::isDigit)
+        val sanitized = when {
+            digits.length > 10 && digits.startsWith("91") -> digits.drop(2)
+            digits.length > 10 && digits.startsWith("0")  -> digits.drop(1)
+            else -> digits
+        }.take(10)
         _uiState.update {
             it.copy(
-                phone = value.filter(Char::isDigit),
+                phone = sanitized,
                 phoneError = null
             )
         }
