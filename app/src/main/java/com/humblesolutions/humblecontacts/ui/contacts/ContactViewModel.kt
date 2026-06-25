@@ -39,6 +39,12 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun toggleFavourite(contact: Contact) {
+        viewModelScope.launch {
+            repo.toggleFavourite(contact.contactId, !contact.favourite)
+        }
+    }
+
     fun deleteContact(contact: Contact) {
         viewModelScope.launch {
             repo.deleteContact(contact.contactId)

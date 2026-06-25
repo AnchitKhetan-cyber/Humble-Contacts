@@ -9,12 +9,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,22 +39,26 @@ fun ContactsScreen(
     onNavigateToAdd:      () -> Unit = {}
 ) {
     val viewModel: ContactViewModel = viewModel()
-    val contacts = viewModel.contacts
 
-    val filterTabs = listOf("All", "By Industry", "By Event", "By Date")
+    val filterTabs = listOf("All", "Favourites", "By Industry", "By Event", "By Date")
     var selectedFilter by remember { mutableStateOf("All") }
     var searchQuery    by remember { mutableStateOf("") }
 
-    val filtered by remember(
-        viewModel.contacts,
-        searchQuery,
-        selectedFilter
-    ) {
+    val filtered by remember(viewModel.contacts, searchQuery, selectedFilter) {
         mutableStateOf(
-            viewModel.filtered(
-                searchQuery,
-                selectedFilter
-            )
+            when (selectedFilter) {
+                "Favourites" -> viewModel.contacts.filter { it.favourite }
+                else -> viewModel.filtered(searchQuery, selectedFilter)
+                    .sortedByDescending { it.favourite }
+            }.let { list ->
+                if (selectedFilter == "Favourites" && searchQuery.isNotBlank())
+                    list.filter {
+                        it.fullName.contains(searchQuery, ignoreCase = true) ||
+                        it.company.contains(searchQuery, ignoreCase = true) ||
+                        it.jobRole.contains(searchQuery, ignoreCase = true)
+                    }
+                else list
+            }
         )
     }
 
@@ -97,7 +103,7 @@ fun ContactsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "All Contacts",
+                    if (selectedFilter == "Favourites") "Favourites" else "All Contacts",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold
                     ),
@@ -139,7 +145,7 @@ fun ContactsScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant,
-                    unfocusedBorderColor    = androidx.compose.ui.graphics.Color.Transparent,
+                    unfocusedBorderColor    = Color.Transparent,
                     focusedBorderColor      = MaterialTheme.colorScheme.primary,
                 ),
                 singleLine = true
@@ -164,22 +170,29 @@ fun ContactsScreen(
                         else
                             MaterialTheme.colorScheme.surfaceVariant
                     ) {
-                        Text(
-                            text = tab,
-                            modifier = Modifier.padding(
-                                horizontal = 14.dp,
-                                vertical = 7.dp
-                            ),
-                            fontSize = 13.sp,
-                            fontWeight = if (isSelected)
-                                FontWeight.SemiBold
-                            else
-                                FontWeight.Normal,
-                            color = if (isSelected)
-                                MaterialTheme.colorScheme.onPrimary
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (tab == "Favourites") {
+                                Icon(
+                                    Icons.Filled.Star,
+                                    contentDescription = null,
+                                    tint = if (isSelected) Color(0xFFFFD700)
+                                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                            Text(
+                                text = tab,
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold
+                                             else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -187,18 +200,46 @@ fun ContactsScreen(
             Spacer(Modifier.height(16.dp))
 
             // ── List ─────────────────────────────────────────────────────────
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filtered) { contact ->
-                    ContactCard(
-                        contact = contact,
-                        onClick = { onNavigateToContact(contact.contactId) }
-                    )
+            if (filtered.isEmpty() && selectedFilter == "Favourites") {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "No favourites yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Tap the ★ on any contact to add it here",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
                 }
-                item { Spacer(Modifier.height(80.dp)) }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filtered, key = { it.contactId }) { contact ->
+                        ContactCard(
+                            contact   = contact,
+                            onClick   = { onNavigateToContact(contact.contactId) },
+                            onFavouriteClick = { viewModel.toggleFavourite(contact) }
+                        )
+                    }
+                    item { Spacer(Modifier.height(80.dp)) }
+                }
             }
         }
     }
@@ -208,9 +249,10 @@ fun ContactsScreen(
 // ─── Contact Card ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun ContactCard(
+fun ContactCard(
     contact: Contact,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onFavouriteClick: (() -> Unit)? = null
 ) {
     Surface(
         modifier = Modifier
@@ -280,6 +322,23 @@ private fun ContactCard(
                             )
                         }
                     }
+                }
+            }
+
+            // Favourite star
+            if (onFavouriteClick != null) {
+                IconButton(
+                    onClick = onFavouriteClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = if (contact.favourite) "Remove from favourites"
+                                             else "Add to favourites",
+                        tint = if (contact.favourite) Color(0xFFFFD700)
+                               else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
         }

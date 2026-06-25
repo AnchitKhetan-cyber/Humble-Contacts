@@ -37,6 +37,8 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.storage
 import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.data.model.ContactNote
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
@@ -263,24 +265,44 @@ fun ContactDetailScreen(
                     }
                 }
 
-                IconButton(
-                    onClick = {
-                        showDeleteDialog = true
-                    },
+                Row(
                     modifier = Modifier
                         .padding(12.dp)
-                        .align(Alignment.TopEnd)
+                        .align(Alignment.TopEnd),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                    // Favourite toggle
+                    IconButton(
+                        onClick = { contact?.let { contactViewModel.toggleFavourite(it) } }
                     ) {
-                        Icon(
-                            Icons.Outlined.Delete,
-                            contentDescription = "Delete Contact",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(6.dp)
-                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFFFD700).copy(alpha = 0.15f)
+                        ) {
+                            Icon(
+                                Icons.Filled.Star,
+                                contentDescription = if (contact?.favourite == true)
+                                    "Remove from favourites" else "Add to favourites",
+                                tint = if (contact?.favourite == true) Color(0xFFFFD700)
+                                       else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
+                    }
+
+                    // Delete
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                        ) {
+                            Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = "Delete Contact",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
                     }
                 }
 

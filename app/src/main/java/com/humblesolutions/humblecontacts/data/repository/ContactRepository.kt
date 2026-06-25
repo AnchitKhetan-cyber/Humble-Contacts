@@ -121,6 +121,12 @@ class  ContactRepository {
         db.collection("contacts").document(contactId).delete().await()
     }
 
+    suspend fun toggleFavourite(contactId: String, isFavourite: Boolean) {
+        db.collection("contacts").document(contactId)
+            .update("favourite", isFavourite, "updatedAt", Timestamp.now())
+            .await()
+    }
+
     suspend fun updateContact(contact: Contact) {
         db.collection("contacts").document(contact.contactId)
             .set(contact.copy(updatedAt = com.google.firebase.Timestamp.now()))
