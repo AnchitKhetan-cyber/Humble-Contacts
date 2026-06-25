@@ -21,6 +21,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import com.humblesolutions.humblecontacts.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -499,32 +501,42 @@ private fun QrIconCard(
     account: LinkedAccount,
     onClick: () -> Unit
 ) {
-    val (icon, bg, tint) = when (account.title) {
-        "Phone"    -> Triple(Icons.Outlined.Call,         Color(0xFFE8F5E9), Color(0xFF2E7D32))
-        "Email"    -> Triple(Icons.Outlined.Email,        Color(0xFFE3F2FD), Color(0xFF1565C0))
-        "WhatsApp" -> Triple(Icons.Outlined.PhoneAndroid, Color(0xFFE8F5E9), Color(0xFF1B5E20))
-        "LinkedIn" -> Triple(Icons.Outlined.Link,         Color(0xFFE3F2FD), Color(0xFF0D47A1))
-        else       -> Triple(Icons.Outlined.Link,         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .shadow(3.dp, CircleShape)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .shadow(3.dp, CircleShape)
-                .clip(CircleShape)
-                .background(bg),
-            contentAlignment = Alignment.Center
-        ) {
+        if (account.title == "WhatsApp") {
+            // Full-bleed WhatsApp branded icon (green bg + white logo built into drawable)
             Icon(
-                imageVector        = icon,
-                contentDescription = account.title,
-                tint               = tint,
-                modifier           = Modifier.size(26.dp)
+                painter           = painterResource(R.drawable.ic_whatsapp),
+                contentDescription = "WhatsApp",
+                tint               = Color.Unspecified,
+                modifier           = Modifier.fillMaxSize()
             )
+        } else {
+            val (icon, bg, tint) = when (account.title) {
+                "Phone"    -> Triple(Icons.Outlined.Call,  Color(0xFFE8F5E9), Color(0xFF2E7D32))
+                "Email"    -> Triple(Icons.Outlined.Email, Color(0xFFE3F2FD), Color(0xFF1565C0))
+                "LinkedIn" -> Triple(Icons.Outlined.Link,  Color(0xFFE3F2FD), Color(0xFF0D47A1))
+                else       -> Triple(Icons.Outlined.Link,  MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(bg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector        = icon,
+                    contentDescription = account.title,
+                    tint               = tint,
+                    modifier           = Modifier.size(26.dp)
+                )
+            }
         }
     }
 }
