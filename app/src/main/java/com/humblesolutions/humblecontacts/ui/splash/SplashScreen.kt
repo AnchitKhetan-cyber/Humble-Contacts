@@ -92,6 +92,7 @@ private val EaseOutBack = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
 
 @Composable
 fun AnimatedSplashScreen(
+    isDark: Boolean = isSystemInDarkTheme(),
     viewModel: SplashViewModel = viewModel(),
     onNavigate: () -> Unit = {}
 ) {
@@ -105,7 +106,6 @@ fun AnimatedSplashScreen(
 
     }
 
-    val isDark  = isSystemInDarkTheme()
     val colors  = if (isDark) DarkSplashColors else LightSplashColors
 
     Box(

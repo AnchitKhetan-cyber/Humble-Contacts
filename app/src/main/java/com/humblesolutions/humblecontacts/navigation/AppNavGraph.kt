@@ -180,6 +180,7 @@ fun AppNavGraph(
         // ── Splash ──────────────────────────────────────────────────────────
         appComposable(route = Routes.SPLASH) {
             AnimatedSplashScreen(
+                isDark = darkMode,
                 onNavigate = {
 
                     val isLoggedIn =
@@ -330,7 +331,12 @@ fun AppNavGraph(
 
             OtpVerifyScreen(
                 viewModel = phoneAuthViewModel,
-                onBack = { navController.popBackStack() },
+                onBack = {
+                    // Reset to Idle so PhoneInputScreen doesn't auto-navigate
+                    // back to OTP (its LaunchedEffect fires on CodeSent).
+                    phoneAuthViewModel.resetState()
+                    navController.popBackStack()
+                },
                 onSuccess = navigateAfterAuthentication
             )
         }

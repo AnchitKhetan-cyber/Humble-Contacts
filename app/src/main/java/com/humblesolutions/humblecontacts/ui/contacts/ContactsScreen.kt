@@ -111,19 +111,6 @@ fun ContactsScreen(
                     ),
                     color = MaterialTheme.colorScheme.onBackground
                 )
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(
-                        Icons.Outlined.FilterList,
-                        contentDescription = "Filter",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .size(20.dp)
-                    )
-                }
             }
 
             // ── Search ───────────────────────────────────────────────────────

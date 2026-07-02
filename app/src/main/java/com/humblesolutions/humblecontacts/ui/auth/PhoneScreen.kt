@@ -1,6 +1,7 @@
 package com.humblesolutions.humblecontacts.ui.auth
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,9 +32,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -170,17 +171,6 @@ fun PhoneInputScreen(
                         onDismiss = { viewModel.clearError() }
                     )
 
-                    FieldLabel("Full Name *")
-
-                    NameTextField(
-                        value         = viewModel.enteredName,
-                        onValueChange = viewModel::onNameChange,
-                        isError       = state is AuthState.Error,
-                        onNext        = { focusManager.moveFocus(FocusDirection.Down) }
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-
                     FieldLabel("Mobile Number")
 
                     PhoneNumberField(
@@ -197,7 +187,7 @@ fun PhoneInputScreen(
                         isError       = state is AuthState.Error,
                         onDone        = {
                             focusManager.clearFocus()
-                            if (viewModel.enteredName.isNotBlank() && phone.length == 10)
+                            if (phone.length == 10)
                                 viewModel.sendOtp("+91$phone", context as Activity)
                         }
                     )
@@ -220,7 +210,7 @@ fun PhoneInputScreen(
                             viewModel.sendOtp("+91$phone", context as Activity)
                         },
                         isLoading = state is AuthState.Loading,
-                        enabled   = viewModel.enteredName.isNotBlank() && phone.length == 10 && state !is AuthState.Loading
+                        enabled   = phone.length == 10 && state !is AuthState.Loading
                     )
 
                     Spacer(Modifier.height(20.dp))
@@ -258,9 +248,35 @@ fun OtpVerifyScreen(
     var otp          by remember { mutableStateOf("") }
     var countdown    by remember { mutableIntStateOf(30) }
     var canResend    by remember { mutableStateOf(false) }
+    var showExitDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state) {
         if (state is AuthState.Success) onSuccess()
+    }
+
+    // Intercept the system back button: confirm before leaving OTP verification
+    // (prevents accidentally exiting and restarting the resend timer).
+    BackHandler { showExitDialog = true }
+
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text("Exit verification?") },
+            text  = { Text("Are you sure you want to go back? You'll need to request a new code.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitDialog = false
+                    onBack()
+                }) {
+                    Text("Exit", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text("Stay")
+                }
+            }
+        )
     }
 
     // 30-second resend countdown
@@ -379,8 +395,7 @@ fun OtpVerifyScreen(
                                 otp = it
                             }
                         },
-                        isError   = state is AuthState.Error,
-                        isLoading = state is AuthState.Loading
+                        isError   = state is AuthState.Error
                     )
 
                     Spacer(Modifier.height(28.dp))
@@ -534,7 +549,7 @@ fun NameTextField(
             decorationBox   = { innerTextField ->
                 if (value.isEmpty()) {
                     Text(
-                        text  = "John Doe",
+                        text  = "Name",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
                     )
@@ -654,8 +669,7 @@ fun PhoneNumberField(
 fun OtpBoxRow(
     value: String,
     onValueChange: (String) -> Unit,
-    isError: Boolean = false,
-    isLoading: Boolean = false
+    isError: Boolean = false
 ) {
     val focusRequester = remember { FocusRequester() }
 
@@ -686,7 +700,7 @@ fun OtpBoxRow(
         ) {
             repeat(6) { index ->
                 val char      = value.getOrNull(index)
-                val isCurrent = index == value.length && !isLoading
+                val isCurrent = index == value.length
 
                 val bgColor = when {
                     isError    -> MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
@@ -715,24 +729,16 @@ fun OtpBoxRow(
                         ) { focusRequester.requestFocus() },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isLoading && char != null) {
-                        CircularProgressIndicator(
-                            modifier    = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color       = Gold400
-                        )
-                    } else {
-                        Text(
-                            text  = char?.toString() ?: "",
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = if (isError)
-                                MaterialTheme.colorScheme.error
-                            else
-                                MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                    Text(
+                        text  = char?.toString() ?: "",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = if (isError)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }

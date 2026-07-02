@@ -30,6 +30,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
@@ -37,7 +39,6 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.storage
 import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.data.model.ContactNote
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
@@ -107,6 +108,10 @@ fun ContactDetailScreen(
 
     val context = LocalContext.current
 
+    // Locally-picked images currently being uploaded — shown in the grid immediately
+    // with a loading overlay until the Storage upload finishes.
+    val uploadingMedia = remember { mutableStateListOf<android.net.Uri>() }
+
     val galleryLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.PickVisualMedia()
@@ -115,6 +120,9 @@ fun ContactDetailScreen(
             if (uri == null) return@rememberLauncherForActivityResult
 
             contact?.let { currentContact ->
+
+                // Show the picked image immediately while it uploads.
+                uploadingMedia.add(uri)
 
                 scope.launch {
 
@@ -156,8 +164,6 @@ fun ContactDetailScreen(
                             Toast.LENGTH_SHORT
                         ).show()
 
-                        // We'll continue here in the next step.
-
                     } catch (e: Exception) {
 
                         Toast.makeText(
@@ -165,6 +171,11 @@ fun ContactDetailScreen(
                             e.localizedMessage,
                             Toast.LENGTH_LONG
                         ).show()
+                    } finally {
+
+                        // Real image is now in `contact.media` (or the upload failed) —
+                        // drop the temporary uploading placeholder.
+                        uploadingMedia.remove(uri)
                     }
                 }
             }
@@ -232,10 +243,14 @@ fun ContactDetailScreen(
             return@Scaffold
         }
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+        ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
 
@@ -246,50 +261,12 @@ fun ContactDetailScreen(
                     .height(160.dp)
                     .background(MaterialTheme.colorScheme.primary)
             ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .align(Alignment.TopStart)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f)
-                    ) {
-                        Icon(
-                            Icons.Outlined.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(6.dp)
-                        )
-                    }
-                }
-
                 Row(
                     modifier = Modifier
                         .padding(12.dp)
                         .align(Alignment.TopEnd),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Favourite toggle
-                    IconButton(
-                        onClick = { contact?.let { contactViewModel.toggleFavourite(it) } }
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(0xFFFFD700).copy(alpha = 0.15f)
-                        ) {
-                            Icon(
-                                Icons.Filled.Star,
-                                contentDescription = if (contact?.favourite == true)
-                                    "Remove from favourites" else "Add to favourites",
-                                tint = if (contact?.favourite == true) Color(0xFFFFD700)
-                                       else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.padding(6.dp)
-                            )
-                        }
-                    }
-
                     // Delete
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Surface(
@@ -483,6 +460,7 @@ fun ContactDetailScreen(
                 )
                 2 -> MediaTab(
                     contact = c,
+                    uploadingMedia = uploadingMedia,
                     onAddMedia = {
                         galleryLauncher.launch(
                             PickVisualMediaRequest(
@@ -501,6 +479,28 @@ fun ContactDetailScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+        }
+
+            // ── Pinned back button (stays fixed while the content scrolls) ───
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .padding(12.dp)
+                    .align(Alignment.TopStart)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 3.dp
+                ) {
+                    Icon(
+                        Icons.Outlined.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(6.dp)
+                    )
+                }
+            }
         }
     }
 
@@ -788,10 +788,21 @@ fun ContactDetailScreen(
                     .background(MaterialTheme.colorScheme.background)
             ) {
 
-                AsyncImage(
-                    model = imageUrl,
+                SubcomposeAsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    loading = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
                 )
 
                 IconButton(
@@ -1232,6 +1243,7 @@ private fun NotesTab(
 @Composable
 private fun MediaTab(
     contact: Contact,
+    uploadingMedia: List<android.net.Uri>,
     onAddMedia: () -> Unit,
     onDeleteMediaClick: (String) -> Unit,
     onMediaClick: (String) -> Unit
@@ -1279,7 +1291,7 @@ private fun MediaTab(
                     .clip(RoundedCornerShape(16.dp))
             )
 
-        } else if (contact.media.isEmpty()) {
+        } else if (contact.media.isEmpty() && uploadingMedia.isEmpty()) {
 
             Column(
                 modifier = Modifier
@@ -1313,7 +1325,7 @@ private fun MediaTab(
             }
         }
 
-        if (contact.media.isNotEmpty()) {
+        if (contact.media.isNotEmpty() || uploadingMedia.isNotEmpty()) {
 
             Spacer(Modifier.height(24.dp))
 
@@ -1332,20 +1344,69 @@ private fun MediaTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
 
+                // Pending uploads first — the local image shown immediately with a
+                // loading overlay until the upload completes.
+                items(uploadingMedia) { uri ->
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        AsyncImage(
+                            model = uri,
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.35f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(26.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
                 items(contact.media) { mediaUrl ->
 
                     Box {
 
-                        AsyncImage(
-                            model = mediaUrl,
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(mediaUrl)
+                                .crossfade(true)
+                                .build(),
                             contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1f)
                                 .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .clickable {
                                     onMediaClick(mediaUrl)
+                                },
+                            loading = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
                                 }
+                            }
                         )
 
                         IconButton(

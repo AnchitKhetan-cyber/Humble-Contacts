@@ -1,9 +1,13 @@
 package com.humblesolutions.humblecontacts.ui.contacts
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.ContactsContract
+import android.provider.Settings
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,11 +31,14 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentDataType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.contentDataType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -196,6 +203,57 @@ fun AddContactScreen(
 
             imageUris = updatedList
         }
+
+    var showCameraSettingsDialog by remember { mutableStateOf(false) }
+    // Counts how many times the user has denied the camera permission.
+    var cameraDenialCount by rememberSaveable { mutableStateOf(0) }
+
+    val cameraPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (granted) {
+                cameraDenialCount = 0
+                cameraLauncher.launch(null)
+            } else {
+                cameraDenialCount++
+                // Only surface the Settings dialog once the user has denied twice.
+                if (cameraDenialCount >= 2) {
+                    showCameraSettingsDialog = true
+                }
+            }
+        }
+
+    if (showCameraSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showCameraSettingsDialog = false },
+            title = { Text("Camera permission needed") },
+            text  = {
+                Text(
+                    "Camera access was turned off. To take a photo, enable the Camera " +
+                        "permission for this app in Settings."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCameraSettingsDialog = false
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null)
+                        )
+                    )
+                }) {
+                    Text("Open Settings")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCameraSettingsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
 
     Scaffold(
@@ -380,7 +438,16 @@ fun AddContactScreen(
                                 return@OutlinedButton
                             }
 
-                            cameraLauncher.launch(null)
+                            val hasCameraPermission = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+
+                            if (hasCameraPermission) {
+                                cameraLauncher.launch(null)
+                            } else {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
                         },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp)
@@ -507,7 +574,7 @@ fun AddContactScreen(
                         nameError = false
                     },
                     label = "Full Name *",
-                    placeholder = "John Doe",
+                    placeholder = "Name",
                     capitalization = KeyboardCapitalization.Words
                 )
                 if (nameError) {
@@ -518,7 +585,7 @@ fun AddContactScreen(
                     value = jobRole,
                     onValueChange = { jobRole = it },
                     label = "Job Role",
-                    placeholder = "Software Engineer",
+                    placeholder = "Role/Position",
                     capitalization = KeyboardCapitalization.Words
                 )
                 Spacer(Modifier.height(12.dp))
@@ -526,7 +593,7 @@ fun AddContactScreen(
                     value = company,
                     onValueChange = { company = it },
                     label = "Company",
-                    placeholder = "Google",
+                    placeholder = "Company Name",
                     capitalization = KeyboardCapitalization.Words
                 )
             }
@@ -539,7 +606,7 @@ fun AddContactScreen(
                     value = email,
                     onValueChange = { email = it },
                     label = "Email",
-                    placeholder = "john@example.com",
+                    placeholder = "Email Id",
                     keyboardType = KeyboardType.Email,
                     leadingIcon = {
                         Icon(Icons.Outlined.Email, null)
@@ -580,7 +647,9 @@ fun AddContactScreen(
                                     else -> digits
                                 }.take(10)
                             },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDataType = ContentDataType.None },
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Phone
                             ),
@@ -606,7 +675,7 @@ fun AddContactScreen(
                     value = linkedIn,
                     onValueChange = { linkedIn = it },
                     label = "LinkedIn Username",
-                    placeholder = "johndoe",
+                    placeholder = "username",
                     keyboardType = KeyboardType.Text,
                     leadingIcon = {
                         Icon(Icons.Outlined.Link, null)
@@ -618,7 +687,7 @@ fun AddContactScreen(
                     value = address,
                     onValueChange = { address = it },
                     label = "Address",
-                    placeholder = "123 Main Street, City, Country",
+                    placeholder = "Address",
                     leadingIcon = {
                         Icon(Icons.Outlined.LocationOn, null)
                     }
@@ -634,7 +703,8 @@ fun AddContactScreen(
                     onValueChange = { notes = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp),
+                        .height(100.dp)
+                        .semantics { contentDataType = ContentDataType.None },
                     placeholder = { Text("How did you meet? What did you discuss?", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) },
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -882,7 +952,9 @@ private fun ContactTextField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDataType = ContentDataType.None },
             keyboardOptions = KeyboardOptions(
                 capitalization = capitalization,
                 keyboardType = keyboardType

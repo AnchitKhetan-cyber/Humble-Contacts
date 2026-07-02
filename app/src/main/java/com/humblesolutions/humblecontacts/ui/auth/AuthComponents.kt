@@ -82,6 +82,7 @@ fun HumbleInputField(
     singleLine: Boolean = true,
     minLines: Int = 1,
     maxLines: Int = 1,
+    readOnly: Boolean = false,
     onImeAction: () -> Unit = {}
 ) {
     val borderColor = if (isError)
@@ -140,6 +141,7 @@ fun HumbleInputField(
             BasicTextField(
                 value                = value,
                 onValueChange        = onValueChange,
+                readOnly             = readOnly,
                 modifier             = Modifier
                     .weight(1f)
                     .padding(
@@ -147,7 +149,10 @@ fun HumbleInputField(
                         vertical   = if (singleLine) 0.dp else 14.dp
                     ),
                 textStyle            = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = if (readOnly)
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else
+                        MaterialTheme.colorScheme.onSurface
                 ),
                 cursorBrush          = SolidColor(Gold400),
                 singleLine           = singleLine,

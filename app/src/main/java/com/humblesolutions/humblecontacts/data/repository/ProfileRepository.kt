@@ -117,11 +117,16 @@ class ProfileRepository {
 
             userId = firebaseUser.uid,
 
-            name = firebaseUser.displayName ?: "",
+            // Prefer the already-saved values; Firebase Auth has no email for phone
+            // users, so falling back to it here would wipe a saved email.
+            name = existingProfile?.name?.takeIf { it.isNotBlank() }
+                ?: firebaseUser.displayName ?: "",
 
-            email = firebaseUser.email ?: "",
+            email = existingProfile?.email?.takeIf { it.isNotBlank() }
+                ?: firebaseUser.email ?: "",
 
-            profilePhotoUrl = firebaseUser.photoUrl?.toString() ?: "",
+            profilePhotoUrl = existingProfile?.profilePhotoUrl?.takeIf { it.isNotBlank() }
+                ?: firebaseUser.photoUrl?.toString() ?: "",
 
             profession = existingProfile?.profession ?: "",
 
@@ -170,6 +175,8 @@ class ProfileRepository {
     }
 
     suspend fun updateProfile(
+        name: String? = null,
+        email: String? = null,
         profession: String,
         company: String,
         countryCode: String,
@@ -178,23 +185,35 @@ class ProfileRepository {
         address: String,
         bio: String
     ) {
-        val uid = auth.currentUser?.uid ?: return
+        val firebaseUser = auth.currentUser ?: return
+
+        // Keep the Firebase Auth display name in sync when it changes.
+        if (name != null && name.isNotBlank() && name != firebaseUser.displayName) {
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                .setDisplayName(name)
+                .build()
+            firebaseUser.updateProfile(profileUpdates).await()
+        }
+
+        val updates = mutableMapOf<String, Any>(
+            "profession" to profession,
+            "company" to company,
+            "countryCode" to countryCode,
+            "phone" to phone,
+            "linkedInUrl" to linkedInUrl,
+            "address" to address,
+            "bio" to bio,
+            "profileCompleted" to true,
+            "updatedAt" to Timestamp.now()
+        )
+
+        // Only phone users edit their name/email here; persist them when provided.
+        if (name != null) updates["name"] = name
+        if (email != null) updates["email"] = email
 
         usersCollection
-            .document(uid)
-            .update(
-                mapOf(
-                    "profession" to profession,
-                    "company" to company,
-                    "countryCode" to countryCode,
-                    "phone" to phone,
-                    "linkedInUrl" to linkedInUrl,
-                    "address" to address,
-                    "bio" to bio,
-                    "ProfileCompleted" to true,
-                    "updatedAt" to Timestamp.now()
-                )
-            )
+            .document(firebaseUser.uid)
+            .update(updates)
             .await()
     }
 

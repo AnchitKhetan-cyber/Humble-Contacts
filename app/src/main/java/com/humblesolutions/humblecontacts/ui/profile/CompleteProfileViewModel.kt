@@ -41,6 +41,26 @@ class CompleteProfileViewModel(
 
                 val profile = repository.getCurrentUserProfile()
 
+                // The number the user signed in with, in E.164 form e.g. "+919876543210".
+                val authPhoneNumber = firebaseUser?.phoneNumber ?: ""
+
+                // Prefer the saved profile's country; otherwise infer it from the
+                // login phone number; otherwise fall back to +91.
+                val resolvedCountry = profile?.countryCode?.let { dc ->
+                    countryCodes.firstOrNull { c -> c.dialCode == dc }
+                } ?: inferCountryFromPhone(authPhoneNumber)
+                ?: countryCodes.first { c -> c.dialCode == "+91" }
+
+                // Prefer the saved local number; otherwise strip the dial code off the
+                // login phone number so the field is pre-filled for phone users.
+                val savedPhone = profile?.phone?.takeIf { p -> p.isNotBlank() }
+                val resolvedPhone = savedPhone
+                    ?: stripDialCode(authPhoneNumber, resolvedCountry.dialCode)
+
+                // Phone-login users can never change their number — it's their verified
+                // login identity — so keep it locked on both Complete Profile and Edit.
+                val phoneLocked = isPhoneUser && resolvedPhone.isNotBlank()
+
                 _uiState.update {
                     it.copy(
                         photoUrl    = profile?.profilePhotoUrl ?: firebaseUser?.photoUrl?.toString() ?: "",
@@ -53,10 +73,9 @@ class CompleteProfileViewModel(
                             ?: firebaseUser?.email ?: "",
                         profession  = profile?.profession ?: "",
                         company     = profile?.company ?: "",
-                        countryCode = profile?.countryCode?.let { dc ->
-                            countryCodes.firstOrNull { c -> c.dialCode == dc }
-                        } ?: countryCodes.first { c -> c.dialCode == "+91" },
-                        phone       = profile?.phone ?: "",
+                        countryCode = resolvedCountry,
+                        phone       = resolvedPhone,
+                        phoneLocked = phoneLocked,
                         linkedInUrl = profile?.linkedInUrl ?: "",
                         address     = profile?.address ?: "",
                         bio         = profile?.bio ?: ""
@@ -293,6 +312,29 @@ class CompleteProfileViewModel(
 
         val state = _uiState.value
 
+        // Phone users edit their own name/email here — validate before saving.
+        if (state.isPhoneUser) {
+            var nameError: String? = null
+            var emailError: String? = null
+
+            when {
+                state.nameInput.isBlank() -> nameError = "Name is required."
+                state.nameInput.trim().length < 2 -> nameError = "Name is too short."
+            }
+            when {
+                state.emailInput.isBlank() -> emailError = "Email is required."
+                !android.util.Patterns.EMAIL_ADDRESS.matcher(state.emailInput.trim()).matches() ->
+                    emailError = "Enter a valid email address."
+            }
+
+            if (nameError != null || emailError != null) {
+                _uiState.update {
+                    it.copy(nameError = nameError, emailError = emailError)
+                }
+                return
+            }
+        }
+
         viewModelScope.launch {
 
             _uiState.update {
@@ -302,6 +344,8 @@ class CompleteProfileViewModel(
             try {
 
                 repository.updateProfile(
+                    name = if (state.isPhoneUser) state.nameInput.trim() else null,
+                    email = if (state.isPhoneUser) state.emailInput.trim() else null,
                     profession = state.profession,
                     company = state.company,
                     countryCode = state.countryCode.dialCode,
@@ -353,6 +397,30 @@ class CompleteProfileViewModel(
             }
     }
 
+
+    /**
+     * Picks the [CountryCode] whose dial code prefixes the given E.164 number,
+     * choosing the longest match to disambiguate overlapping codes. Returns null
+     * when the number is blank or no dial code matches.
+     */
+    private fun inferCountryFromPhone(e164Number: String): CountryCode? {
+        if (e164Number.isBlank()) return null
+        return countryCodes
+            .filter { e164Number.startsWith(it.dialCode) }
+            .maxByOrNull { it.dialCode.length }
+    }
+
+    /**
+     * Removes the leading [dialCode] from an E.164 number and returns the last 10
+     * local digits, matching the format the phone field expects.
+     */
+    private fun stripDialCode(e164Number: String, dialCode: String): String {
+        if (e164Number.isBlank()) return ""
+        return e164Number
+            .removePrefix(dialCode)
+            .filter(Char::isDigit)
+            .takeLast(10)
+    }
 
     private fun validateLinkedIn(): Boolean {
 

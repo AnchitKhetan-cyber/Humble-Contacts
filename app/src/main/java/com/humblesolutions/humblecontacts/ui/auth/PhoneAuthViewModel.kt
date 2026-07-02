@@ -51,6 +51,18 @@ class PhoneAuthViewModel : ViewModel() {
         if (state is AuthState.Error) state = AuthState.Idle
     }
 
+    /**
+     * Resets the auth state back to [AuthState.Idle].
+     *
+     * Called when the user leaves the OTP screen to change their number. Without
+     * this, the shared state stays at [AuthState.CodeSent], and PhoneInputScreen's
+     * `LaunchedEffect(state)` would immediately re-navigate forward to the OTP
+     * screen (restarting its 30s timer).
+     */
+    fun resetState() {
+        state = AuthState.Idle
+    }
+
     private fun requestOtp(
         phoneNumber: String,
         activity: Activity,

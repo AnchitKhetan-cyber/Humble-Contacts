@@ -22,7 +22,7 @@ sealed class AuthResult<out T> {
     object Loading : AuthResult<Nothing>()
 }
 
-// ─── Repository ───────────────────────────────────────────────────────────────
+// ─── Repository ────────────────────────────────────────────────────────────
 
 class AuthRepository {
 

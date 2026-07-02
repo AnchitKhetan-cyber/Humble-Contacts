@@ -22,6 +22,8 @@ data class CompleteProfileUiState(
     val company: String = "",
     val countryCode: CountryCode = countryCodes.first { it.dialCode == "+91" },
     val phone: String = "",
+    // True when the phone number was pre-filled from the login number; locked from editing.
+    val phoneLocked: Boolean = false,
     val linkedInUrl: String = "",
     val address: String = "",
     val bio: String = "",

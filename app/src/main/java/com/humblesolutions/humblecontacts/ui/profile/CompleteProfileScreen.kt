@@ -289,7 +289,7 @@ fun CompleteProfileScreen(
                             HumbleInputField(
                                 value          = uiState.nameInput,
                                 onValueChange  = viewModel::onNameInputChange,
-                                placeholder    = "John Doe",
+                                placeholder    = "Name",
                                 leadingIcon    = Icons.Outlined.Person,
                                 keyboardType   = KeyboardType.Text,
                                 capitalization = KeyboardCapitalization.Words,
@@ -325,7 +325,7 @@ fun CompleteProfileScreen(
                         HumbleInputField(
                             value          = uiState.profession,
                             onValueChange  = viewModel::onProfessionChange,
-                            placeholder    = "Software Engineer",
+                            placeholder    = "Role/Position",
                             leadingIcon    = Icons.Outlined.WorkOutline,
                             keyboardType   = KeyboardType.Text,
                             capitalization = KeyboardCapitalization.Words,
@@ -343,7 +343,7 @@ fun CompleteProfileScreen(
                         HumbleInputField(
                             value          = uiState.company,
                             onValueChange  = viewModel::onCompanyChange,
-                            placeholder    = "Google",
+                            placeholder    = "Company Name",
                             leadingIcon    = Icons.Outlined.Business,
                             keyboardType   = KeyboardType.Text,
                             capitalization = KeyboardCapitalization.Words,
@@ -363,7 +363,8 @@ fun CompleteProfileScreen(
 
                             CountryCodeDropdown(
                                 selectedCountry   = uiState.countryCode,
-                                onCountrySelected = viewModel::onCountryCodeChange
+                                onCountrySelected = viewModel::onCountryCodeChange,
+                                enabled           = !uiState.phoneLocked
                             )
 
                             HumbleInputField(
@@ -375,6 +376,7 @@ fun CompleteProfileScreen(
                                 imeAction     = ImeAction.Next,
                                 isError       = uiState.phoneError != null,
                                 errorMessage  = uiState.phoneError,
+                                readOnly      = uiState.phoneLocked,
                                 onImeAction   = { focusManager.moveFocus(FocusDirection.Down) },
                                 modifier      = Modifier.weight(1f)
                             )

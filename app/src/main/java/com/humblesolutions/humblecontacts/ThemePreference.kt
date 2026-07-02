@@ -11,7 +11,11 @@ class ThemePreference(context: Context) {
         prefs.edit().putBoolean("dark_mode", enabled).apply()
     }
 
-    fun isDarkMode(): Boolean {
-        return prefs.getBoolean("dark_mode", false)
+    fun isDarkMode(default: Boolean = false): Boolean {
+        return prefs.getBoolean("dark_mode", default)
+    }
+
+    fun hasDarkModeSet(): Boolean {
+        return prefs.contains("dark_mode")
     }
 }

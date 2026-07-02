@@ -11,6 +11,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Whatsapp
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,7 +35,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.humblesolutions.humblecontacts.data.model.UserProfile
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
+import kotlinx.coroutines.launch
 import com.humblesolutions.humblecontacts.ui.home.HomeViewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
@@ -57,8 +66,16 @@ fun ProfileScreen(
     val viewModel: HomeViewModel = viewModel()
     val user = FirebaseAuth.getInstance().currentUser
 
-    val displayName = user?.displayName ?: "User"
-    val email = user?.email ?: ""
+    // Firestore profile — the source of truth for phone users, whose Firebase Auth
+    // account carries no email (and sometimes no display name).
+    var userProfile by remember { mutableStateOf<UserProfile?>(null) }
+
+    val displayName = user?.displayName?.takeIf { it.isNotBlank() }
+        ?: userProfile?.name?.takeIf { it.isNotBlank() }
+        ?: "User"
+    val email = user?.email?.takeIf { it.isNotBlank() }
+        ?: userProfile?.email
+        ?: ""
 
     val context = LocalContext.current
 
@@ -80,20 +97,27 @@ fun ProfileScreen(
     var selectedQrAccount by remember { mutableStateOf<LinkedAccount?>(null) }
     val qrAccounts = remember { mutableStateListOf<LinkedAccount>() }
 
-    LaunchedEffect(Unit) {
-        val repo    = ProfileRepository()
-        val profile = repo.getCurrentUserProfile()
-        qrAccounts.clear()
-        if (profile != null) {
-            if (profile.phone.isNotBlank()) {
-                val full = "${profile.countryCode}${profile.phone}"
-                qrAccounts.add(LinkedAccount("Phone", full))
-                qrAccounts.add(LinkedAccount("WhatsApp", full))
+    val loadScope = rememberCoroutineScope()
+
+    // Reload on every resume so edits made on the Edit Profile screen are reflected
+    // when the user navigates back here.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        loadScope.launch {
+            val repo    = ProfileRepository()
+            val profile = repo.getCurrentUserProfile()
+            userProfile = profile
+            qrAccounts.clear()
+            if (profile != null) {
+                if (profile.phone.isNotBlank()) {
+                    val full = "${profile.countryCode}${profile.phone}"
+                    qrAccounts.add(LinkedAccount("Phone", full))
+                    qrAccounts.add(LinkedAccount("WhatsApp", full))
+                }
+                if (profile.email.isNotBlank())
+                    qrAccounts.add(LinkedAccount("Email", profile.email))
+                if (profile.linkedInUrl.isNotBlank())
+                    qrAccounts.add(LinkedAccount("LinkedIn", profile.linkedInUrl))
             }
-            if (profile.email.isNotBlank())
-                qrAccounts.add(LinkedAccount("Email", profile.email))
-            if (profile.linkedInUrl.isNotBlank())
-                qrAccounts.add(LinkedAccount("LinkedIn", profile.linkedInUrl))
         }
     }
 
@@ -277,17 +301,6 @@ fun ProfileScreen(
                         onCheckedChange = onDarkModeChange
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
-                    SettingsToggleRow(
-                        icon = Icons.Outlined.Notifications,
-                        iconBg = MaterialTheme.colorScheme.primaryContainer,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = "Notifications",
-                        subtitle = "Follow-up reminders",
-                        checked = notificationsEnabled,
-                        onCheckedChange = {
-                            settingsViewModel.setNotifications(it)
-                        }
-                    )
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -502,10 +515,10 @@ private fun QrIconCard(
     onClick: () -> Unit
 ) {
     val (icon, bg, tint) = when (account.title) {
-        "Phone"    -> Triple(Icons.Outlined.Call,         Color(0xFFE8F5E9), Color(0xFF2E7D32))
-        "Email"    -> Triple(Icons.Outlined.Email,        Color(0xFFE3F2FD), Color(0xFF1565C0))
-        "WhatsApp" -> Triple(Icons.Outlined.PhoneAndroid, Color(0xFFE8F5E9), Color(0xFF1B5E20))
-        "LinkedIn" -> Triple(Icons.Outlined.Link,         Color(0xFFE3F2FD), Color(0xFF0D47A1))
+        "Phone"    -> Triple(Icons.Default.Phone,         Color(0xFFE8F5E9), Color(0xFF2E7D32))
+        "Email"    -> Triple(Icons.Default.Email,        Color(0xFFE3F2FD), Color(0xFF1565C0))
+        "WhatsApp" -> Triple(Icons.Default.Whatsapp, Color(0xFFE8F5E9), Color(0xFF1B5E20))
+        "LinkedIn" -> Triple(Icons.Default.Link,         Color(0xFFE3F2FD), Color(0xFF0D47A1))
         else       -> Triple(Icons.Outlined.Link,         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
     }
 

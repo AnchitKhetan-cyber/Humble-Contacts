@@ -27,7 +27,8 @@ import com.humblesolutions.humblecontacts.ui.theme.Gold400
 @Composable
 fun CountryCodeDropdown(
     selectedCountry: CountryCode,
-    onCountrySelected: (CountryCode) -> Unit
+    onCountrySelected: (CountryCode) -> Unit,
+    enabled: Boolean = true
 ) {
 
     var expanded by remember {
@@ -46,7 +47,7 @@ fun CountryCodeDropdown(
                     MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
                     RoundedCornerShape(12.dp)
                 )
-                .clickable { expanded = true }
+                .clickable(enabled = enabled) { expanded = true }
                 .padding(horizontal = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment     = Alignment.CenterVertically

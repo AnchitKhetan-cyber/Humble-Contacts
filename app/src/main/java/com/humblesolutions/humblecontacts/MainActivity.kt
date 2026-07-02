@@ -30,11 +30,20 @@ class MainActivity : ComponentActivity() {
         // Create notification channels (safe to call multiple times)
         NotificationHelper.createChannels(this)
 
+        val themePreference = ThemePreference(this)
+
         setContent {
             val systemDark = isSystemInDarkTheme()
-            var darkMode by remember { mutableStateOf(systemDark) }
 
-            LaunchedEffect(systemDark) { darkMode = systemDark }
+            // Restore the saved choice; fall back to the system setting on first launch.
+            var darkMode by remember {
+                mutableStateOf(
+                    if (themePreference.hasDarkModeSet())
+                        themePreference.isDarkMode()
+                    else
+                        systemDark
+                )
+            }
 
             HumbleContactsTheme(darkTheme = darkMode) {
                 val deepLinkContactId = intent?.data
@@ -49,7 +58,10 @@ class MainActivity : ComponentActivity() {
                 AppNavGraph(
                     startDestination = startDestination,
                     darkMode = darkMode,
-                    onDarkModeChange = { darkMode = it }
+                    onDarkModeChange = {
+                        darkMode = it
+                        themePreference.saveDarkMode(it)
+                    }
                 )
             }
         }

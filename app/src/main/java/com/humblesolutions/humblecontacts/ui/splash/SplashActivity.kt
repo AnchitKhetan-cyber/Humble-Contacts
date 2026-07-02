@@ -5,11 +5,13 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.humblesolutions.humblecontacts.MainActivity
+import com.humblesolutions.humblecontacts.ThemePreference
 import com.humblesolutions.humblecontacts.ui.theme.HumbleContactsTheme
 
 @SuppressLint("CustomSplashScreen")
@@ -47,13 +49,24 @@ class SplashActivity : ComponentActivity() {
             android.R.color.transparent
         )
 
+        val themePreference = ThemePreference(this)
+
         setContent {
 
+            // Use the saved app preference; fall back to the system setting on first launch.
+            val darkTheme =
+                if (themePreference.hasDarkModeSet())
+                    themePreference.isDarkMode()
+                else
+                    isSystemInDarkTheme()
+
             HumbleContactsTheme(
-                darkTheme = true
+                darkTheme = darkTheme
             ) {
 
                 AnimatedSplashScreen(
+
+                    isDark = darkTheme,
 
                     onNavigate = {
 

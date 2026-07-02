@@ -1,6 +1,13 @@
 package com.humblesolutions.humblecontacts.ui.home
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -13,6 +20,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,7 +77,7 @@ fun HomeScreen(
         // If contents is null, the user cancelled the scan — no-op.
     }
 
-    val launchQrScanner: () -> Unit = {
+    val startScan: () -> Unit = {
         val options = ScanOptions().apply {
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
             setPrompt("Scan a QR code")
@@ -74,6 +86,63 @@ fun HomeScreen(
             setCameraId(0)
         }
         qrScanLauncher.launch(options)
+    }
+
+    var showCameraSettingsDialog by remember { mutableStateOf(false) }
+    // Counts how many times the user has denied the camera permission.
+    var cameraDenialCount by rememberSaveable { mutableStateOf(0) }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            cameraDenialCount = 0
+            startScan()
+        } else {
+            cameraDenialCount++
+            // Only surface the Settings dialog once the user has denied twice.
+            if (cameraDenialCount >= 2) showCameraSettingsDialog = true
+        }
+    }
+
+    if (showCameraSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showCameraSettingsDialog = false },
+            title = { Text("Camera permission needed") },
+            text  = {
+                Text(
+                    "Camera access was turned off. To scan a QR code, enable the Camera " +
+                        "permission for this app in Settings."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showCameraSettingsDialog = false
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null)
+                        )
+                    )
+                }) {
+                    Text("Open Settings")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCameraSettingsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    val launchQrScanner: () -> Unit = {
+        val hasCameraPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasCameraPermission) startScan()
+        else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
 
