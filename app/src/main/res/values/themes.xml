@@ -7,5 +7,13 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
+    <!-- Cold-start system splash (light). Background follows the theme and the app
+         logo is shown, matching the rest of the app. -->
+    <style name="Theme.HumbleContacts.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#FFF5F7FC</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.HumbleContacts</item>
+    </style>
+
 </resources>
 

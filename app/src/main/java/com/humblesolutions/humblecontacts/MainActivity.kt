@@ -12,6 +12,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.humblesolutions.humblecontacts.navigation.AppNavGraph
 import com.humblesolutions.humblecontacts.navigation.Routes
 import com.humblesolutions.humblecontacts.notifications.NotificationHelper
@@ -24,7 +25,15 @@ class MainActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must be called before super.onCreate — hands the system splash off to the app.
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // Keep the system splash on screen until Compose has drawn the first frame,
+        // so no window background can flash between the OS splash and the app splash.
+        var keepSplashOnScreen = true
+        splashScreen.setKeepOnScreenCondition { keepSplashOnScreen }
+
         enableEdgeToEdge()
 
         // Create notification channels (safe to call multiple times)
@@ -33,17 +42,22 @@ class MainActivity : ComponentActivity() {
         val themePreference = ThemePreference(this)
 
         setContent {
+            LaunchedEffect(Unit) { keepSplashOnScreen = false }
+
             val systemDark = isSystemInDarkTheme()
 
-            // Restore the saved choice; fall back to the system setting on first launch.
-            var darkMode by remember {
+            // null  = follow the device theme (updates live when the phone switches).
+            // true/false = user override set via the Profile dark-mode toggle.
+            var themeOverride by remember {
                 mutableStateOf(
                     if (themePreference.hasDarkModeSet())
                         themePreference.isDarkMode()
                     else
-                        systemDark
+                        null
                 )
             }
+
+            val darkMode = themeOverride ?: systemDark
 
             HumbleContactsTheme(darkTheme = darkMode) {
                 val deepLinkContactId = intent?.data
@@ -58,9 +72,11 @@ class MainActivity : ComponentActivity() {
                 AppNavGraph(
                     startDestination = startDestination,
                     darkMode = darkMode,
-                    onDarkModeChange = {
-                        darkMode = it
-                        themePreference.saveDarkMode(it)
+                    onDarkModeChange = { turnedOn ->
+                        // Any manual toggle (on or off) persists as an override that
+                        // wins over the device theme.
+                        themeOverride = turnedOn
+                        themePreference.saveDarkMode(turnedOn)
                     }
                 )
             }
