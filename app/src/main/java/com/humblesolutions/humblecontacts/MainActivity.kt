@@ -46,18 +46,23 @@ class MainActivity : ComponentActivity() {
 
             val systemDark = isSystemInDarkTheme()
 
-            // null  = follow the device theme (updates live when the phone switches).
-            // true/false = user override set via the Profile dark-mode toggle.
-            var themeOverride by remember {
+            // On first launch, adopt the device theme and persist it so the toggle is
+            // saved from the start (dark device → saved dark, light device → saved light).
+            // After that the saved value wins, and manual toggles persist over it.
+            var darkMode by remember {
                 mutableStateOf(
                     if (themePreference.hasDarkModeSet())
                         themePreference.isDarkMode()
                     else
-                        null
+                        systemDark
                 )
             }
 
-            val darkMode = themeOverride ?: systemDark
+            LaunchedEffect(Unit) {
+                if (!themePreference.hasDarkModeSet()) {
+                    themePreference.saveDarkMode(systemDark)
+                }
+            }
 
             HumbleContactsTheme(darkTheme = darkMode) {
                 val deepLinkContactId = intent?.data
@@ -73,9 +78,8 @@ class MainActivity : ComponentActivity() {
                     startDestination = startDestination,
                     darkMode = darkMode,
                     onDarkModeChange = { turnedOn ->
-                        // Any manual toggle (on or off) persists as an override that
-                        // wins over the device theme.
-                        themeOverride = turnedOn
+                        // Any manual toggle persists and overrides the device theme.
+                        darkMode = turnedOn
                         themePreference.saveDarkMode(turnedOn)
                     }
                 )
