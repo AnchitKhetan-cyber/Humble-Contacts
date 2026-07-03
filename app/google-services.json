@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "478584687226",
+    "project_id": "humble-contacts-2e9c9",
+    "storage_bucket": "humble-contacts-2e9c9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:478584687226:android:682133da28e13a919049c3",
+        "android_client_info": {
+          "package_name": "com.humblesolutions.humblecontacts"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "478584687226-nkjq6lhesrfujeo93rbpctef4rnomh71.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.humblesolutions.humblecontacts",
+            "certificate_hash": "610b9e6ecd302411affe96b0db83eb6eab8539ab"
+          }
+        },
+        {
+          "client_id": "478584687226-tsvs041p9si8hnavdnpvdb7bqu8nnnc7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.humblesolutions.humblecontacts",
+            "certificate_hash": "5a6a14d9ac5773b23670ad489297e1eed33ca931"
+          }
+        },
+        {
+          "client_id": "478584687226-l7n3gm2g79a472tqspeto8vga531omip.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1ff5MALBYBRLGSOKuobLVSQWV2_DzupQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "478584687226-l7n3gm2g79a472tqspeto8vga531omip.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
