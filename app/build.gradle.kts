@@ -19,6 +19,7 @@ android {
     namespace = "com.humblesolutions.humblecontacts"
     compileSdk = 36
 
+    
     defaultConfig {
         applicationId = "com.humblesolutions.humblecontacts"
         minSdk = 24
