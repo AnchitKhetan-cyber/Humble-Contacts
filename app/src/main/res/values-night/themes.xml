@@ -10,7 +10,9 @@
          logo is shown, matching the rest of the app. -->
     <style name="Theme.HumbleContacts.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#FF0F1523</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- Transparent icon so the OS-enforced cold-start splash shows only the
+             background colour (no icon), blending straight into AnimatedSplashScreen. -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_transparent</item>
         <item name="postSplashScreenTheme">@style/Theme.HumbleContacts</item>
     </style>
 </resources>
