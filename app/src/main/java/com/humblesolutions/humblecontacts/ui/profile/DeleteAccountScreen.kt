@@ -186,30 +186,33 @@ fun DeleteAccountScreen(
     // Google sign-in: request the Cloud Function confirmation email and wait for the user
     // to tap the link (which flips `confirmed` in Firestore — watched by the listener).
     fun startGoogleEmailVerification() {
-        emailWaiting = true
+        // Busy while the request is in flight; only claim "email sent" once it succeeds.
+        isDeleting = true
         profileViewModel.requestDeletionEmail(
             context = context,
             onSent = {
+                isDeleting = false
+                emailWaiting = true
                 Toast.makeText(
                     context,
                     "We've emailed you a confirmation link. Tap it to finish deleting your account.",
                     Toast.LENGTH_LONG
                 ).show()
+                confirmListener.reg?.remove()
+                confirmListener.reg = profileViewModel.observeDeletionConfirmed(
+                    context = context,
+                    onConfirmed = {
+                        confirmListener.reg?.remove(); confirmListener.reg = null
+                        emailWaiting = false
+                        gate.advance()
+                    },
+                    onError = { message ->
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    }
+                )
             },
             onError = { message ->
-                emailWaiting = false
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-            }
-        )
-        confirmListener.reg?.remove()
-        confirmListener.reg = profileViewModel.observeDeletionConfirmed(
-            context = context,
-            onConfirmed = {
-                confirmListener.reg?.remove(); confirmListener.reg = null
-                emailWaiting = false
-                gate.advance()
-            },
-            onError = { message ->
+                isDeleting = false
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
         )
