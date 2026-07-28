@@ -4,6 +4,7 @@ import android.app.Activity
 import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.ActionCodeSettings
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -30,6 +31,20 @@ sealed class AuthResult<out T> {
 // ─── Repository ────────────────────────────────────────────────────────────
 
 class AuthRepository {
+
+    companion object {
+        /** App package, used for the email-link ActionCodeSettings. */
+        private const val ANDROID_PACKAGE_NAME = "com.humblesolutions.humblecontacts"
+
+        /**
+         * Continue URL for the deletion confirmation email link. MUST be an authorized
+         * domain in the Firebase console that hosts Android App Links (assetlinks.json)
+         * and is registered in the manifest intent-filter below. Replace this
+         * placeholder with your real hosted domain before the email link can work.
+         */
+        private const val EMAIL_LINK_CONTINUE_URL =
+            "https://humblecontacts.example.com/finishDelete"
+    }
 
     private val auth = FirebaseAuth.getInstance()
 
@@ -94,10 +109,56 @@ class AuthRepository {
      * Re-authenticates the current user with a fresh credential. This MUST succeed
      * before any account/data deletion so that [deleteCurrentUser] cannot fail with
      * [FirebaseAuthRecentLoginRequiredException] after data has already been wiped.
+     *
+     * A successful call refreshes the login recency on the [currentUser] itself, so
+     * the subsequent [deleteCurrentUser] does not need the credential passed to it.
      */
     suspend fun reauthenticate(credential: AuthCredential): AuthResult<Unit> =
         runCatching {
             val user = auth.currentUser ?: throw Exception("No signed-in user to re-authenticate")
+            user.reauthenticate(credential).await()
+            AuthResult.Success(Unit)
+        }.getOrElse { AuthResult.Error(mapError(it)) }
+
+    // ── Email confirmation link (deletion gate) ──────────────────────────────────
+    //
+    // NOTE (setup required to function at runtime): the email link relies on
+    //   1. "Email link (passwordless sign-in)" enabled for the Email/Password
+    //      provider in the Firebase console,
+    //   2. an authorized domain you host that serves an Android App Links
+    //      assetlinks.json (Firebase Dynamic Links / *.page.link was shut down in
+    //      2025 and cannot be used), and
+    //   3. [EMAIL_LINK_CONTINUE_URL] pointing at that domain.
+    // Until that is configured, sending/handling the link will not work end-to-end.
+
+    /** Sends a one-time confirmation link to [email] to gate account deletion. */
+    suspend fun sendReauthEmailLink(email: String): AuthResult<Unit> =
+        runCatching {
+            val settings = ActionCodeSettings.newBuilder()
+                .setUrl(EMAIL_LINK_CONTINUE_URL)
+                .setHandleCodeInApp(true)
+                .setAndroidPackageName(ANDROID_PACKAGE_NAME, true, null)
+                .build()
+            auth.sendSignInLinkToEmail(email, settings).await()
+            AuthResult.Success(Unit)
+        }.getOrElse { AuthResult.Error(mapError(it)) }
+
+    /** Whether [link] is a Firebase email sign-in/confirmation link. */
+    fun isReauthEmailLink(link: String): Boolean = auth.isSignInWithEmailLink(link)
+
+    /**
+     * Completes the email side of the deletion gate.
+     *
+     * For accounts with the Email/Password provider linked, the email link is a valid
+     * re-auth credential, so this re-authenticates and refreshes login recency. For
+     * accounts where email/password is NOT a linked provider (e.g. Google-only), the
+     * link cannot re-authenticate; callers should treat a `true` [isReauthEmailLink]
+     * as confirmation only and obtain the delete credential elsewhere (silent Google).
+     */
+    suspend fun reauthenticateWithEmailLink(email: String, link: String): AuthResult<Unit> =
+        runCatching {
+            val user = auth.currentUser ?: throw Exception("No signed-in user to re-authenticate")
+            val credential = EmailAuthProvider.getCredentialWithLink(email, link)
             user.reauthenticate(credential).await()
             AuthResult.Success(Unit)
         }.getOrElse { AuthResult.Error(mapError(it)) }

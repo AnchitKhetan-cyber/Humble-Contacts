@@ -30,18 +30,15 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.rememberCoroutineScope
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
-import com.humblesolutions.humblecontacts.data.auth.GoogleSignInHelper
-import kotlinx.coroutines.launch
+import com.humblesolutions.humblecontacts.data.auth.PendingDeletionStore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,137 +54,145 @@ fun DeleteAccountScreen(
 
     val profileViewModel: ProfileViewModel = viewModel()
 
-    val scope = rememberCoroutineScope()
+    // Persisted gate state, so the flow can resume after the email-link round trip.
+    val store = remember { PendingDeletionStore(context) }
 
-    var showConfirmationDialog by remember {
-        mutableStateOf(false)
-    }
+    // Channels that must be verified before deletion (email link AND/OR phone OTP),
+    // based on what's on the account. All required channels must be completed.
+    val requiredChannels = remember { profileViewModel.requiredChannels() }
 
-    var isDeleting by remember {
-        mutableStateOf(false)
-    }
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
 
-    // Re-authentication state (a fresh credential must be collected before any delete).
-    var showPasswordReauth by remember { mutableStateOf(false) }
-    var passwordReauth by remember { mutableStateOf("") }
-
-    var showOtpReauth by remember { mutableStateOf(false) }
-    var otpReauth by remember { mutableStateOf("") }
+    // Phone OTP dialog state.
+    var showOtpDialog by remember { mutableStateOf(false) }
+    var otpInput by remember { mutableStateOf("") }
     var phoneVerificationId by remember { mutableStateOf<String?>(null) }
 
-    BackHandler(enabled = isDeleting) {
-        // Disable back press while deleting
+    // "Check your email" waiting state while the confirmation link is outstanding.
+    var emailWaiting by remember { mutableStateOf(false) }
+
+    // Holds the gate-advancement logic in a plain (non-snapshot) box so the phone/email
+    // completion callbacks can invoke it without a forward reference — and so reassigning
+    // it each composition does not write snapshot state (which would loop recomposition).
+    val gate = remember { object { var advance: () -> Unit = {} } }
+
+    BackHandler(enabled = isDeleting || emailWaiting || showOtpDialog) {
+        // Block back navigation while a delete gate is mid-flight.
     }
 
-    // Runs the actual delete once we hold a fresh credential. On ANY failure it keeps
-    // the user on this screen with an error — it never calls onDeleteSuccess().
-    fun proceedDelete(credential: com.google.firebase.auth.AuthCredential) {
+    // Final step: delete the account (Auth first, then best-effort data cleanup).
+    fun finalizeDeletion() {
         isDeleting = true
-        profileViewModel.deleteAccount(
-            credential = credential,
+        profileViewModel.finalizeDeletion(
+            context = context,
             onSuccess = {
                 isDeleting = false
-                Toast.makeText(
-                    context,
-                    "Account deleted successfully.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(context, "Account deleted successfully.", Toast.LENGTH_SHORT).show()
                 onDeleteSuccess()
             },
             onError = { message ->
                 isDeleting = false
+                emailWaiting = false
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
         )
     }
 
-    // Decides how to re-authenticate based on the user's sign-in provider, then
-    // gathers the credential (password dialog / Google picker / OTP) and deletes.
-    fun startReauth() {
-        when (profileViewModel.currentProviderId()) {
-            "email" -> {
-                passwordReauth = ""
-                showPasswordReauth = true
+    // Sends the phone OTP and shows the code entry dialog.
+    fun startPhoneOtp() {
+        val activity = context as? Activity
+        if (activity == null) {
+            Toast.makeText(context, "Unable to verify. Please try again.", Toast.LENGTH_LONG).show()
+            return
+        }
+        isDeleting = true
+        val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+            override fun onVerificationCompleted(cred: PhoneAuthCredential) {
+                // Instant / auto-retrieval — verify the credential and advance.
+                profileViewModel.completePhoneCredential(
+                    context = context,
+                    credential = cred,
+                    onDone = { isDeleting = false; showOtpDialog = false; gate.advance() },
+                    onError = { msg -> isDeleting = false; Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
+                )
             }
 
-            "google" -> {
-                isDeleting = true
-                scope.launch {
-                    when (val result = GoogleSignInHelper(context).signIn()) {
-                        is GoogleSignInHelper.GoogleSignInResult.Success ->
-                            proceedDelete(profileViewModel.buildGoogleCredential(result.idToken))
-
-                        is GoogleSignInHelper.GoogleSignInResult.Cancelled -> {
-                            isDeleting = false
-                            Toast.makeText(
-                                context,
-                                "Re-authentication cancelled. Your account was not deleted.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-
-                        is GoogleSignInHelper.GoogleSignInResult.Error -> {
-                            isDeleting = false
-                            Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
-                        }
-                    }
-                }
+            override fun onVerificationFailed(e: FirebaseException) {
+                isDeleting = false
+                Toast.makeText(context, e.message ?: "Could not send verification code.", Toast.LENGTH_LONG).show()
             }
 
-            "phone" -> {
-                val activity = context as? Activity
-                if (activity == null) {
-                    Toast.makeText(
-                        context,
-                        "Unable to re-authenticate. Please try again.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return
-                }
-                isDeleting = true
-                val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                    override fun onVerificationCompleted(cred: PhoneAuthCredential) {
-                        // Instant / auto-retrieval — re-auth straight away.
-                        proceedDelete(cred)
-                    }
-
-                    override fun onVerificationFailed(e: FirebaseException) {
-                        isDeleting = false
-                        Toast.makeText(
-                            context,
-                            e.message ?: "Could not send verification code.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-
-                    override fun onCodeSent(
-                        verificationId: String,
-                        token: PhoneAuthProvider.ForceResendingToken
-                    ) {
-                        phoneVerificationId = verificationId
-                        isDeleting = false
-                        otpReauth = ""
-                        showOtpReauth = true
-                    }
-                }
-                val sent = profileViewModel.sendReauthOtp(activity, callbacks)
-                if (!sent) {
-                    isDeleting = false
-                    Toast.makeText(
-                        context,
-                        "No phone number on file for this account.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+            override fun onCodeSent(
+                verificationId: String,
+                token: PhoneAuthProvider.ForceResendingToken
+            ) {
+                phoneVerificationId = verificationId
+                isDeleting = false
+                otpInput = ""
+                showOtpDialog = true
             }
+        }
+        val sent = profileViewModel.sendPhoneOtp(activity, callbacks)
+        if (!sent) {
+            isDeleting = false
+            Toast.makeText(context, "No phone number on file for this account.", Toast.LENGTH_LONG).show()
+        }
+    }
 
-            else -> {
+    // Sends the email confirmation link and shows the waiting state. The flow resumes
+    // when the user taps the link and returns via deep link (see the LaunchedEffect below).
+    fun startEmailLink() {
+        emailWaiting = true
+        profileViewModel.sendEmailLink(
+            context = context,
+            onSent = {
                 Toast.makeText(
                     context,
-                    "Unable to determine your sign-in method. Please contact support.",
+                    "We've emailed you a secure link. Tap it to finish deleting your account.",
                     Toast.LENGTH_LONG
                 ).show()
+            },
+            onError = { message ->
+                emailWaiting = false
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
+        )
+    }
+
+    // Advances the gate: complete the phone OTP first (in-app), then the email link
+    // (round trip), then finalize. Driven by the persisted per-channel flags so it is
+    // order-independent across the email round trip.
+    gate.advance = {
+        when {
+            requiredChannels.contains(DeleteChannel.PHONE) && !store.phoneVerified ->
+                startPhoneOtp()
+            requiredChannels.contains(DeleteChannel.EMAIL) && !store.emailVerified ->
+                startEmailLink()
+            else ->
+                finalizeDeletion()
+        }
+    }
+
+    // On return from the email link (fresh Activity intent stashed the URL in the store),
+    // complete the email side and continue the gate.
+    LaunchedEffect(Unit) {
+        val link = store.emailLink
+        if (store.inProgress && link != null) {
+            store.emailLink = null
+            emailWaiting = true
+            profileViewModel.completeEmailLink(
+                context = context,
+                link = link,
+                onDone = { emailWaiting = false; gate.advance() },
+                onError = { message ->
+                    emailWaiting = false
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                }
+            )
+        } else if (store.inProgress) {
+            // Opened fresh with leftover state from an abandoned attempt — start clean.
+            store.clear()
         }
     }
 
@@ -601,10 +606,10 @@ fun DeleteAccountScreen(
                     ),
 
                     onClick = {
-                        // Close the confirmation and start the mandatory re-auth step.
-                        // Nothing is deleted until re-authentication succeeds.
+                        // Close the confirmation and start the verification gate.
+                        // Nothing is deleted until every required channel is verified.
                         showConfirmationDialog = false
-                        startReauth()
+                        gate.advance()
                     }
 
                 ) {
@@ -631,73 +636,13 @@ fun DeleteAccountScreen(
 
     }
 
-    // ── Re-auth: Email/Password ──────────────────────────────────────────────────
+    // ── Gate: Phone OTP ──────────────────────────────────────────────────────────
 
-    if (showPasswordReauth) {
-
-        AlertDialog(
-            onDismissRequest = {
-                if (!isDeleting) showPasswordReauth = false
-            },
-            title = { Text("Confirm it's you") },
-            text = {
-                Column {
-                    Text(
-                        "For your security, enter your password to permanently delete your account."
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = passwordReauth,
-                        onValueChange = { passwordReauth = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        label = { Text("Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        )
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    enabled = !isDeleting && passwordReauth.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
-                    onClick = {
-                        val credential =
-                            profileViewModel.buildEmailCredential(passwordReauth)
-                        if (credential == null) {
-                            Toast.makeText(
-                                context,
-                                "Unable to re-authenticate. Please try again.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        } else {
-                            showPasswordReauth = false
-                            proceedDelete(credential)
-                        }
-                    }
-                ) { Text("Delete Forever") }
-            },
-            dismissButton = {
-                TextButton(
-                    enabled = !isDeleting,
-                    onClick = { showPasswordReauth = false }
-                ) { Text("Cancel") }
-            }
-        )
-    }
-
-    // ── Re-auth: Phone OTP ───────────────────────────────────────────────────────
-
-    if (showOtpReauth) {
+    if (showOtpDialog) {
 
         AlertDialog(
             onDismissRequest = {
-                if (!isDeleting) showOtpReauth = false
+                if (!isDeleting) { showOtpDialog = false; profileViewModel.cancelDeletion(context) }
             },
             title = { Text("Enter verification code") },
             text = {
@@ -707,8 +652,8 @@ fun DeleteAccountScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                     OutlinedTextField(
-                        value = otpReauth,
-                        onValueChange = { otpReauth = it.filter { c -> c.isDigit() }.take(6) },
+                        value = otpInput,
+                        onValueChange = { otpInput = it.filter { c -> c.isDigit() }.take(6) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         label = { Text("Verification code") },
@@ -721,7 +666,7 @@ fun DeleteAccountScreen(
             },
             confirmButton = {
                 Button(
-                    enabled = !isDeleting && otpReauth.length == 6 && phoneVerificationId != null,
+                    enabled = !isDeleting && otpInput.length == 6 && phoneVerificationId != null,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     ),
@@ -733,20 +678,77 @@ fun DeleteAccountScreen(
                                 "Verification expired. Please try again.",
                                 Toast.LENGTH_LONG
                             ).show()
-                            showOtpReauth = false
+                            showOtpDialog = false
                         } else {
-                            showOtpReauth = false
-                            proceedDelete(
-                                profileViewModel.buildPhoneCredential(vid, otpReauth)
+                            isDeleting = true
+                            profileViewModel.completePhoneOtp(
+                                context = context,
+                                verificationId = vid,
+                                otp = otpInput,
+                                onDone = {
+                                    isDeleting = false
+                                    showOtpDialog = false
+                                    gate.advance()
+                                },
+                                onError = { msg ->
+                                    isDeleting = false
+                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                }
                             )
                         }
                     }
-                ) { Text("Delete Forever") }
+                ) {
+                    if (isDeleting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Verify")
+                    }
+                }
             },
             dismissButton = {
                 TextButton(
                     enabled = !isDeleting,
-                    onClick = { showOtpReauth = false }
+                    onClick = { showOtpDialog = false; profileViewModel.cancelDeletion(context) }
+                ) { Text("Cancel") }
+            }
+        )
+    }
+
+    // ── Gate: Email confirmation link (waiting for the tap) ──────────────────────
+
+    if (emailWaiting) {
+
+        AlertDialog(
+            onDismissRequest = { /* must resolve via the emailed link or Cancel */ },
+            title = { Text("Check your email") },
+            text = {
+                Column {
+                    Text(
+                        "We've sent a secure confirmation link to " +
+                            (profileViewModel.currentEmail ?: "your email") +
+                            ". Open it on this device and tap the link to finish deleting your account."
+                    )
+                    if (requiredChannels.contains(DeleteChannel.PHONE)) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "You'll also confirm the code sent to your phone.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    enabled = !isDeleting,
+                    onClick = {
+                        emailWaiting = false
+                        profileViewModel.cancelDeletion(context)
+                    }
                 ) { Text("Cancel") }
             }
         )
