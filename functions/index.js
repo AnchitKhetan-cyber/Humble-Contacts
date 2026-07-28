@@ -29,15 +29,32 @@ const db = admin.firestore();
 
 const REGION = "us-central1";
 
-function buildTransport() {
+async function buildTransport() {
+  // Real delivery: use configured SMTP credentials.
+  if (process.env.SMTP_HOST) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: Number(process.env.SMTP_PORT) === 465,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+
+  // DEV/TEST fallback (no SMTP_* configured): nodemailer generates a throwaway
+  // Ethereal account. The message is NOT delivered to a real inbox — a preview URL
+  // is logged instead (see getTestMessageUrl below). Set SMTP_* for real delivery.
+  const testAccount = await nodemailer.createTestAccount();
+  functions.logger.warn(
+    "No SMTP_* configured — using Ethereal test account; email is NOT delivered, see preview URL."
+  );
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false,
+    auth: { user: testAccount.user, pass: testAccount.pass },
   });
 }
 
@@ -88,8 +105,9 @@ exports.requestAccountDeletion = functions.https.onCall(async (data, context) =>
     `https://${REGION}-${project}.cloudfunctions.net/confirmAccountDeletion` +
     `?uid=${encodeURIComponent(uid)}&token=${token}`;
 
-  await buildTransport().sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+  const transport = await buildTransport();
+  const info = await transport.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@humblecontacts.app",
     to: email,
     subject: "Confirm your Humble Contacts account deletion",
     text:
@@ -102,6 +120,12 @@ exports.requestAccountDeletion = functions.https.onCall(async (data, context) =>
       `<p><a href="${confirmUrl}">Confirm account deletion</a></p>` +
       `<p style="color:#888;font-size:13px">If you didn't request this, ignore this email — your account stays safe.</p>`,
   });
+
+  // When using the Ethereal test fallback, log the preview URL so the email can be viewed.
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) {
+    functions.logger.log("EMAIL_PREVIEW_URL", previewUrl);
+  }
 
   return { ok: true };
 });
