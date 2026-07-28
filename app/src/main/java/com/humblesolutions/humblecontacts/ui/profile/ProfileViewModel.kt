@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.firestore.ListenerRegistration
 import com.humblesolutions.humblecontacts.data.auth.AuthRepository
 import com.humblesolutions.humblecontacts.data.auth.AuthResult
 import com.humblesolutions.humblecontacts.data.auth.GoogleSignInHelper
@@ -94,6 +95,77 @@ class ProfileViewModel : ViewModel() {
             // For non-email providers the valid link is confirmation enough.
             store.emailVerified = true
             onDone()
+        }
+    }
+
+    /**
+     * Marks the email channel satisfied without a link — used when the confirmation
+     * link can't be sent (e.g. email-link sign-in is disabled for the project) and the
+     * account's identity is proven another way (silent Google re-auth, or phone OTP).
+     */
+    fun skipEmailChannel(context: Context) {
+        PendingDeletionStore(context).emailVerified = true
+    }
+
+    // ── Cloud Function deletion verification (Google sign-in) ────────────────────
+
+    /** Requests the confirmation email (via Cloud Function) and marks deletion in progress. */
+    fun requestDeletionEmail(
+        context: Context,
+        onSent: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            when (val result = authRepository.requestAccountDeletionEmail()) {
+                is AuthResult.Error -> onError(result.message)
+                else -> {
+                    PendingDeletionStore(context).inProgress = true
+                    onSent()
+                }
+            }
+        }
+    }
+
+    /**
+     * Listens for the emailed confirmation to be tapped; on confirmation marks the email
+     * channel verified. Returns the registration so the UI can detach it.
+     */
+    fun observeDeletionConfirmed(
+        context: Context,
+        onConfirmed: () -> Unit,
+        onError: (String) -> Unit
+    ): ListenerRegistration? =
+        authRepository.observeDeletionConfirmed(
+            onConfirmed = {
+                PendingDeletionStore(context).emailVerified = true
+                onConfirmed()
+            },
+            onError = onError
+        )
+
+    /**
+     * Fallback for Email/Password accounts when the confirmation link can't be sent:
+     * re-authenticate with the account password instead, which also refreshes recency.
+     */
+    fun reauthWithPassword(
+        context: Context,
+        password: String,
+        onDone: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val credential = authRepository.buildEmailCredential(password)
+        if (credential == null) {
+            onError("No email on file for this account.")
+            return
+        }
+        viewModelScope.launch {
+            when (val result = authRepository.reauthenticate(credential)) {
+                is AuthResult.Error -> onError(result.message)
+                else -> {
+                    PendingDeletionStore(context).emailVerified = true
+                    onDone()
+                }
+            }
         }
     }
 
@@ -185,6 +257,9 @@ class ProfileViewModel : ViewModel() {
                 onError("Something went wrong. Please try again.")
                 return@launch
             }
+
+            // Remove the deletion-request doc while still authenticated (best-effort).
+            authRepository.deleteDeletionRequest(uid)
 
             // Delete the Auth account first — no data is removed unless this succeeds.
             try {

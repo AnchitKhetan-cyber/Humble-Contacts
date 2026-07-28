@@ -17,6 +17,8 @@ import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeUnit
 
@@ -49,6 +51,8 @@ class AuthRepository {
     private val auth = FirebaseAuth.getInstance()
 
     private val firestore = FirebaseFirestore.getInstance()
+
+    private val functions = FirebaseFunctions.getInstance()
 
     val currentUser get() = auth.currentUser
     val isLoggedIn  get() = auth.currentUser != null
@@ -245,6 +249,48 @@ class AuthRepository {
         is FirebaseAuthUserCollisionException      -> "An account with this email already exists"
         is FirebaseAuthWeakPasswordException       -> "Password is too weak — use 8+ characters"
         else -> e.localizedMessage ?: "Something went wrong. Please try again."
+    }
+
+    // ── Cloud Function deletion verification (Google sign-in) ────────────────────
+
+    /**
+     * Asks the `requestAccountDeletion` Cloud Function to email a one-time confirmation
+     * link to the account email. The function stores the token at `account_deletions/{uid}`.
+     */
+    suspend fun requestAccountDeletionEmail(): AuthResult<Unit> =
+        runCatching {
+            functions.getHttpsCallable("requestAccountDeletion").call().await()
+            AuthResult.Success(Unit)
+        }.getOrElse { AuthResult.Error(mapError(it)) }
+
+    /**
+     * Listens for the deletion request to be confirmed (the user tapped the emailed link,
+     * which flipped `confirmed: true`). Returns the registration so the caller can detach it.
+     */
+    fun observeDeletionConfirmed(
+        onConfirmed: () -> Unit,
+        onError: (String) -> Unit
+    ): ListenerRegistration? {
+        val uid = auth.currentUser?.uid ?: return null
+        return firestore.collection("account_deletions").document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error.localizedMessage ?: "Could not verify confirmation.")
+                    return@addSnapshotListener
+                }
+                if (snapshot != null && snapshot.exists() &&
+                    snapshot.getBoolean("confirmed") == true
+                ) {
+                    onConfirmed()
+                }
+            }
+    }
+
+    /** Best-effort removal of the deletion-request doc (while still authenticated). */
+    suspend fun deleteDeletionRequest(uid: String) {
+        runCatching {
+            firestore.collection("account_deletions").document(uid).delete().await()
+        }
     }
 
     suspend fun deleteCurrentUser() {

@@ -30,14 +30,17 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.DisposableEffect
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.firestore.ListenerRegistration
 import com.humblesolutions.humblecontacts.data.auth.PendingDeletionStore
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,12 +75,22 @@ fun DeleteAccountScreen(
     // "Check your email" waiting state while the confirmation link is outstanding.
     var emailWaiting by remember { mutableStateOf(false) }
 
+    // Password fallback (Email/Password accounts) when the confirmation link can't be sent.
+    var showPasswordFallback by remember { mutableStateOf(false) }
+    var passwordInput by remember { mutableStateOf("") }
+
     // Holds the gate-advancement logic in a plain (non-snapshot) box so the phone/email
     // completion callbacks can invoke it without a forward reference — and so reassigning
     // it each composition does not write snapshot state (which would loop recomposition).
     val gate = remember { object { var advance: () -> Unit = {} } }
 
-    BackHandler(enabled = isDeleting || emailWaiting || showOtpDialog) {
+    // Firestore listener for the Cloud Function deletion confirmation (Google accounts).
+    val confirmListener = remember { object { var reg: ListenerRegistration? = null } }
+    DisposableEffect(Unit) {
+        onDispose { confirmListener.reg?.remove(); confirmListener.reg = null }
+    }
+
+    BackHandler(enabled = isDeleting || emailWaiting || showOtpDialog || showPasswordFallback) {
         // Block back navigation while a delete gate is mid-flight.
     }
 
@@ -153,22 +166,71 @@ fun DeleteAccountScreen(
                     Toast.LENGTH_LONG
                 ).show()
             },
+            onError = { _ ->
+                // The confirmation link can't be sent (e.g. email-link sign-in is disabled).
+                // Degrade gracefully: Email/Password accounts fall back to a password prompt;
+                // other providers skip the email channel and prove identity another way
+                // (silent Google re-auth at finalize, or the phone OTP).
+                emailWaiting = false
+                if (profileViewModel.currentProviderId() == "email") {
+                    passwordInput = ""
+                    showPasswordFallback = true
+                } else {
+                    profileViewModel.skipEmailChannel(context)
+                    gate.advance()
+                }
+            }
+        )
+    }
+
+    // Google sign-in: request the Cloud Function confirmation email and wait for the user
+    // to tap the link (which flips `confirmed` in Firestore — watched by the listener).
+    fun startGoogleEmailVerification() {
+        emailWaiting = true
+        profileViewModel.requestDeletionEmail(
+            context = context,
+            onSent = {
+                Toast.makeText(
+                    context,
+                    "We've emailed you a confirmation link. Tap it to finish deleting your account.",
+                    Toast.LENGTH_LONG
+                ).show()
+            },
             onError = { message ->
                 emailWaiting = false
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
         )
+        confirmListener.reg?.remove()
+        confirmListener.reg = profileViewModel.observeDeletionConfirmed(
+            context = context,
+            onConfirmed = {
+                confirmListener.reg?.remove(); confirmListener.reg = null
+                emailWaiting = false
+                gate.advance()
+            },
+            onError = { message ->
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+        )
     }
 
-    // Advances the gate: complete the phone OTP first (in-app), then the email link
-    // (round trip), then finalize. Driven by the persisted per-channel flags so it is
-    // order-independent across the email round trip.
+    // The email channel is provider-aware: Google accounts confirm via the Cloud Function
+    // email; everything else uses the email link (with password fallback on send failure).
+    fun startEmailChannel() {
+        if (profileViewModel.currentProviderId() == "google") startGoogleEmailVerification()
+        else startEmailLink()
+    }
+
+    // Advances the gate: complete the phone OTP first (in-app), then the email step,
+    // then finalize. Driven by the persisted per-channel flags so it is order-independent
+    // across the email round trip.
     gate.advance = {
         when {
             requiredChannels.contains(DeleteChannel.PHONE) && !store.phoneVerified ->
                 startPhoneOtp()
             requiredChannels.contains(DeleteChannel.EMAIL) && !store.emailVerified ->
-                startEmailLink()
+                startEmailChannel()
             else ->
                 finalizeDeletion()
         }
@@ -178,21 +240,45 @@ fun DeleteAccountScreen(
     // complete the email side and continue the gate.
     LaunchedEffect(Unit) {
         val link = store.emailLink
-        if (store.inProgress && link != null) {
-            store.emailLink = null
-            emailWaiting = true
-            profileViewModel.completeEmailLink(
-                context = context,
-                link = link,
-                onDone = { emailWaiting = false; gate.advance() },
-                onError = { message ->
-                    emailWaiting = false
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        when {
+            // Returning from the email-link (Email/Password accounts).
+            store.inProgress && link != null -> {
+                store.emailLink = null
+                emailWaiting = true
+                profileViewModel.completeEmailLink(
+                    context = context,
+                    link = link,
+                    onDone = { emailWaiting = false; gate.advance() },
+                    onError = { message ->
+                        emailWaiting = false
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
+
+            // Resuming a Google Cloud-Function verification after re-entering the screen.
+            store.inProgress && profileViewModel.currentProviderId() == "google" -> {
+                if (store.emailVerified) {
+                    gate.advance()
+                } else {
+                    emailWaiting = true
+                    confirmListener.reg?.remove()
+                    confirmListener.reg = profileViewModel.observeDeletionConfirmed(
+                        context = context,
+                        onConfirmed = {
+                            confirmListener.reg?.remove(); confirmListener.reg = null
+                            emailWaiting = false
+                            gate.advance()
+                        },
+                        onError = { message ->
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    )
                 }
-            )
-        } else if (store.inProgress) {
+            }
+
             // Opened fresh with leftover state from an abandoned attempt — start clean.
-            store.clear()
+            store.inProgress -> store.clear()
         }
     }
 
@@ -717,6 +803,72 @@ fun DeleteAccountScreen(
         )
     }
 
+    // ── Gate: Password fallback (Email/Password accounts, link unavailable) ──────
+
+    if (showPasswordFallback) {
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!isDeleting) { showPasswordFallback = false; profileViewModel.cancelDeletion(context) }
+            },
+            title = { Text("Confirm your password") },
+            text = {
+                Column {
+                    Text("Enter your account password to permanently delete your account.")
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = passwordInput,
+                        onValueChange = { passwordInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = !isDeleting && passwordInput.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    onClick = {
+                        isDeleting = true
+                        profileViewModel.reauthWithPassword(
+                            context = context,
+                            password = passwordInput,
+                            onDone = {
+                                isDeleting = false
+                                showPasswordFallback = false
+                                gate.advance()
+                            },
+                            onError = { msg ->
+                                isDeleting = false
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    }
+                ) {
+                    if (isDeleting) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Confirm")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !isDeleting,
+                    onClick = { showPasswordFallback = false; profileViewModel.cancelDeletion(context) }
+                ) { Text("Cancel") }
+            }
+        )
+    }
+
     // ── Gate: Email confirmation link (waiting for the tap) ──────────────────────
 
     if (emailWaiting) {
@@ -747,6 +899,7 @@ fun DeleteAccountScreen(
                     enabled = !isDeleting,
                     onClick = {
                         emailWaiting = false
+                        confirmListener.reg?.remove(); confirmListener.reg = null
                         profileViewModel.cancelDeletion(context)
                     }
                 ) { Text("Cancel") }
