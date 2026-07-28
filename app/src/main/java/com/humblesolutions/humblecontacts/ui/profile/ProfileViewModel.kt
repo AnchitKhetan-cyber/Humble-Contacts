@@ -297,4 +297,14 @@ class ProfileViewModel : ViewModel() {
     fun cancelDeletion(context: Context) {
         PendingDeletionStore(context).clear()
     }
+
+    /**
+     * Completes a Google server-side deletion: the Cloud Function has already deleted the
+     * account with admin privileges once the email link was confirmed, so the app only
+     * needs to clear local state and sign out (no client re-authentication).
+     */
+    fun completeServerSideDeletion(context: Context) {
+        PendingDeletionStore(context).clear()
+        authRepository.signOut()
+    }
 }

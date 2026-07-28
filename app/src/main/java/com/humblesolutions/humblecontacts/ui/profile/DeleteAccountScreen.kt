@@ -204,7 +204,11 @@ fun DeleteAccountScreen(
                     onConfirmed = {
                         confirmListener.reg?.remove(); confirmListener.reg = null
                         emailWaiting = false
-                        gate.advance()
+                        // The Cloud Function deleted the account server-side (admin, no
+                        // re-auth). Just clear local state, sign out, and go to login.
+                        profileViewModel.completeServerSideDeletion(context)
+                        Toast.makeText(context, "Account deleted successfully.", Toast.LENGTH_SHORT).show()
+                        onDeleteSuccess()
                     },
                     onError = { message ->
                         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -271,7 +275,9 @@ fun DeleteAccountScreen(
                         onConfirmed = {
                             confirmListener.reg?.remove(); confirmListener.reg = null
                             emailWaiting = false
-                            gate.advance()
+                            profileViewModel.completeServerSideDeletion(context)
+                            Toast.makeText(context, "Account deleted successfully.", Toast.LENGTH_SHORT).show()
+                            onDeleteSuccess()
                         },
                         onError = { message ->
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()

@@ -131,7 +131,10 @@ exports.requestAccountDeletion = functions.https.onCall(async (data, context) =>
 });
 
 /**
- * HTTPS: validate the token and mark the deletion confirmed. Opened from the email link.
+ * HTTPS: validate the token, then delete the account server-side with the Admin SDK.
+ * Opened from the email link. Because this runs with admin privileges, NO client-side
+ * re-authentication is needed — the app just drops to the logged-out state once it sees
+ * `confirmed: true`.
  */
 exports.confirmAccountDeletion = functions.https.onRequest(async (req, res) => {
   const uid = String(req.query.uid || "");
@@ -152,15 +155,52 @@ exports.confirmAccountDeletion = functions.https.onRequest(async (req, res) => {
     return;
   }
 
+  // Signal the app to drop to the logged-out state (it's watching this doc). Set BEFORE
+  // deleting the Auth user so the client receives it while its token is still valid.
   await ref.update({
     confirmed: true,
     confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
+  // Server-side cascade delete with admin privileges (no re-auth required).
+  try {
+    // Firestore user doc.
+    await db.collection("users").doc(uid).delete();
+
+    // Firestore contacts owned by the user (chunked to respect batch limits).
+    const contacts = await db.collection("contacts").where("ownerId", "==", uid).get();
+    let batch = db.batch();
+    let count = 0;
+    for (const doc of contacts.docs) {
+      batch.delete(doc.ref);
+      count++;
+      if (count % 400 === 0) {
+        await batch.commit();
+        batch = db.batch();
+      }
+    }
+    await batch.commit();
+
+    // Storage business-card images (best-effort).
+    try {
+      await admin.storage().bucket().deleteFiles({ prefix: `business_cards/${uid}/` });
+    } catch (storageErr) {
+      functions.logger.warn("Storage cleanup failed", storageErr);
+    }
+
+    // The Auth account itself.
+    await admin.auth().deleteUser(uid);
+
+    functions.logger.log("Account fully deleted (server-side)", uid);
+  } catch (err) {
+    functions.logger.error("Server-side deletion failed", err);
+    res.status(500).send(
+      htmlPage("Something went wrong", "We couldn't finish deleting your account. Please try again.")
+    );
+    return;
+  }
+
   res.status(200).send(
-    htmlPage(
-      "Deletion confirmed",
-      "Your account deletion is confirmed. Return to the Humble Contacts app to finish."
-    )
+    htmlPage("Account deleted", "Your account has been permanently deleted. You can close this page.")
   );
 });
