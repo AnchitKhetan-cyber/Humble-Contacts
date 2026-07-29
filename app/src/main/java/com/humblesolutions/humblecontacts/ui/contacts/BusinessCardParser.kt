@@ -10,7 +10,9 @@ import kotlinx.serialization.json.Json
 object BusinessCardParser {
 
     private val model = GenerativeModel(
-        modelName = "gemini-3.1-flash-lite",
+        // gemini-3.1-flash-lite is not a valid model for the generativeai:0.9.0 client,
+        // so every parse failed. gemini-2.0-flash is supported, fast and cheap.
+        modelName = "gemini-2.0-flash",
         apiKey = BuildConfig.GEMINI_API_KEY
     )
 
