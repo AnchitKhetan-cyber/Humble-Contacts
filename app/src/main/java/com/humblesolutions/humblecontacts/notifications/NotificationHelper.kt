@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
+import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -18,6 +19,11 @@ object NotificationHelper {
     const val CHANNEL_GENERAL   = "humble_general"
 
     fun createChannels(context: Context) {
+        // NotificationChannel only exists on API 26+ (Android 8.0). On API 24–25 the
+        // concept doesn't exist, so skip channel creation entirely — guarding here
+        // protects every caller (e.g. MainActivity.onCreate) from crashing on 7.x.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val soundUri = Settings.System.DEFAULT_NOTIFICATION_URI
