@@ -13,6 +13,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.google.firebase.auth.FirebaseAuth
+import com.humblesolutions.humblecontacts.data.auth.PendingDeletionStore
 import com.humblesolutions.humblecontacts.navigation.AppNavGraph
 import com.humblesolutions.humblecontacts.navigation.Routes
 import com.humblesolutions.humblecontacts.notifications.NotificationHelper
@@ -69,10 +71,22 @@ class MainActivity : ComponentActivity() {
                     ?.takeIf { it.host == "humblecontacts.page.link" }
                     ?.lastPathSegment
 
-                val startDestination = if (deepLinkContactId != null)
-                    Routes.contactDetail(deepLinkContactId)
-                else
-                    Routes.SPLASH
+                // Returning account-deletion confirmation link: stash the URL for
+                // DeleteAccountScreen to consume and route straight there (only if a
+                // user is signed in — deletion requires it).
+                val deletionEmailLink = intent?.data?.toString()
+                    ?.takeIf { FirebaseAuth.getInstance().isSignInWithEmailLink(it) }
+                val isDeletionLink =
+                    deletionEmailLink != null && FirebaseAuth.getInstance().currentUser != null
+                if (isDeletionLink) {
+                    PendingDeletionStore(this@MainActivity).emailLink = deletionEmailLink
+                }
+
+                val startDestination = when {
+                    isDeletionLink -> Routes.DELETE_ACCOUNT
+                    deepLinkContactId != null -> Routes.contactDetail(deepLinkContactId)
+                    else -> Routes.SPLASH
+                }
 
                 AppNavGraph(
                     startDestination = startDestination,
@@ -106,5 +120,16 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+
+        // If the deletion confirmation link arrives while the app is already running,
+        // re-evaluate the start destination so the delete flow can resume.
+        val link = intent.data?.toString()
+        if (link != null &&
+            FirebaseAuth.getInstance().isSignInWithEmailLink(link) &&
+            FirebaseAuth.getInstance().currentUser != null
+        ) {
+            PendingDeletionStore(this).emailLink = link
+            recreate()
+        }
     }
 }

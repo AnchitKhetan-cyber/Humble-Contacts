@@ -133,10 +133,15 @@ class  ContactRepository {
             .await()
     }
 
-    suspend fun deleteAllContacts() {
+    // NOTE on account deletion: these three take an explicit [ownerUid] because
+    // account deletion removes the Firebase Auth user FIRST, after which
+    // `auth.currentUser` is null and the `uid` getter would return "" — targeting
+    // the wrong document paths. Callers must capture the uid before Auth deletion.
+
+    suspend fun deleteAllContacts(ownerUid: String = uid) {
 
         val snapshot = db.collection("contacts")
-            .whereEqualTo("ownerId", uid)
+            .whereEqualTo("ownerId", ownerUid)
             .get()
             .await()
 
@@ -149,11 +154,24 @@ class  ContactRepository {
         batch.commit().await()
     }
 
-    suspend fun deleteUserDocument() {
+    suspend fun deleteUserDocument(ownerUid: String = uid) {
         db.collection("users")
-            .document(uid)
+            .document(ownerUid)
             .delete()
             .await()
+    }
+
+    /**
+     * Best-effort deletion of the user's uploaded business-card images at
+     * `business_cards/<uid>/…`. Cloud Storage has no folder delete, so we list
+     * the folder and delete each file. Callers should treat failures as non-fatal.
+     */
+    suspend fun deleteBusinessCardImages(ownerUid: String = uid) {
+        val folder = storageRef.child("business_cards").child(ownerUid)
+        val listing = folder.listAll().await()
+        listing.items.forEach { item ->
+            item.delete().await()
+        }
     }
 
     suspend fun replaceContact(contact: Contact): Boolean {

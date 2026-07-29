@@ -80,6 +80,52 @@ class GoogleSignInHelper(private val context: Context) {
         }
     }
 
+    /**
+     * Silent re-authentication used by the account-deletion flow.
+     *
+     * Requests an idToken for the currently-authorized account WITHOUT showing the
+     * account picker: `setFilterByAuthorizedAccounts(true)` + `setAutoSelectEnabled(true)`
+     * lets CredentialManager return the credential automatically when exactly one
+     * previously-authorized account exists. If 0 or 2+ authorized accounts exist,
+     * CredentialManager cannot auto-select and this returns [GoogleSignInResult.Error]
+     * (or [GoogleSignInResult.Cancelled]) rather than popping a picker — the delete
+     * flow surfaces that as an actionable error instead of prompting account selection.
+     */
+    suspend fun signInSilently(): GoogleSignInResult {
+        return try {
+            val googleIdOption = GetGoogleIdOption.Builder()
+                .setServerClientId(context.getString(com.humblesolutions.humblecontacts.R.string.default_web_client_id))
+                // Only accounts the user has already used with this app…
+                .setFilterByAuthorizedAccounts(true)
+                // …and auto-return it with no picker when there is exactly one.
+                .setAutoSelectEnabled(true)
+                .build()
+
+            val request = GetCredentialRequest.Builder()
+                .addCredentialOption(googleIdOption)
+                .build()
+
+            val result = credentialManager.getCredential(request = request, context = context)
+            val credential = result.credential
+
+            if (credential is CustomCredential &&
+                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+            ) {
+                val googleCred = GoogleIdTokenCredential.createFrom(credential.data)
+                GoogleSignInResult.Success(googleCred.idToken)
+            } else {
+                GoogleSignInResult.Error("Unexpected credential type")
+            }
+        } catch (e: GetCredentialCancellationException) {
+            GoogleSignInResult.Cancelled
+        } catch (e: androidx.credentials.exceptions.NoCredentialException) {
+            // 0 authorized accounts (or none auto-selectable) — cannot stay silent.
+            GoogleSignInResult.Error("Could not re-authenticate your Google account automatically. Please sign in again and retry.")
+        } catch (e: Exception) {
+            GoogleSignInResult.Error(e.localizedMessage ?: "Google re-authentication failed")
+        }
+    }
+
     // Fallback: show all Google accounts (for first-time users)
     private suspend fun signInWithAllAccounts(): GoogleSignInResult {
         return try {

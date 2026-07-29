@@ -88,6 +88,23 @@
                     android:pathPrefix="/contact/" />
             </intent-filter>
 
+            <!--
+              Account-deletion email confirmation link (App Links).
+              SETUP REQUIRED: replace the host with a real domain you control that
+              serves a matching /.well-known/assetlinks.json, add it as an authorized
+              domain in the Firebase console, and keep it in sync with
+              AuthRepository.EMAIL_LINK_CONTINUE_URL. Until then this link won't verify.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="humblecontacts.example.com"
+                    android:pathPrefix="/finishDelete" />
+            </intent-filter>
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

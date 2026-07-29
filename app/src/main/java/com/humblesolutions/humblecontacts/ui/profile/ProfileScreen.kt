@@ -92,7 +92,6 @@ fun ProfileScreen(
 
     val profileViewModel: ProfileViewModel = viewModel()
 
-    var showDeleteDialog  by remember { mutableStateOf(false) }
     var showLogoutDialog  by remember { mutableStateOf(false) }
     var selectedQrAccount by remember { mutableStateOf<LinkedAccount?>(null) }
     val qrAccounts = remember { mutableStateListOf<LinkedAccount>() }
@@ -342,100 +341,11 @@ fun ProfileScreen(
         }
     }
 
-    if (showDeleteDialog) {
-
-        AlertDialog(
-
-            onDismissRequest = {
-                showDeleteDialog = false
-            },
-
-            icon = {
-                Icon(
-                    Icons.Outlined.DeleteForever,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-            },
-
-            title = {
-                Text("Delete Account")
-            },
-
-            text = {
-                Text(
-                    "This will permanently delete your account and all your contacts.\n\nThis action cannot be undone."
-                )
-            },
-
-            confirmButton = {
-
-                TextButton(
-
-                    onClick = {
-
-                        showDeleteDialog = false
-
-                        profileViewModel.deleteAccount(
-
-                            onSuccess = {
-
-                                onLogout()
-
-                            },
-
-                            onError = { message ->
-
-                                if (message == "REAUTH_REQUIRED") {
-
-                                    Toast.makeText(
-                                        context,
-                                        "Please sign in again before deleting your account.",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-
-                                    onLogout()
-
-                                } else {
-
-                                    Toast.makeText(
-                                        context,
-                                        message,
-                                        Toast.LENGTH_LONG
-                                    ).show()
-
-                                }
-                            }
-                        )
-                    }
-
-                ) {
-
-                    Text(
-                        "Delete",
-                        color = MaterialTheme.colorScheme.error
-                    )
-
-                }
-
-            },
-
-            dismissButton = {
-
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                    }
-                ) {
-
-                    Text("Cancel")
-
-                }
-
-            }
-
-        )
-    }
+    // NOTE: account deletion is handled by DeleteAccountScreen (reached via
+    // onNavigateToDeleteAccount), which performs the required re-authentication
+    // before deleting. The old inline delete dialog here was unreachable
+    // (showDeleteDialog was never set to true) and bypassed re-auth, so it was
+    // removed as part of ticket #1.
 
     if (showLogoutDialog) {
 
