@@ -60,6 +60,7 @@ import com.humblesolutions.humblecontacts.utils.NetworkUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddContactScreen(
+    vcard: String? = null,
     onBack: () -> Unit = {},
     onSave: () -> Unit = {},
     onNavigateToHome: () -> Unit = {},
@@ -84,8 +85,14 @@ fun AddContactScreen(
 
     var savingDots by rememberSaveable { mutableStateOf("") }
 
+    // Seed prefill from a scanned vCard (if any). Parsing is best-effort and
+    // never throws, so a malformed vCard just yields a blank form. The existing
+    // LaunchedEffect(extractedContact) below copies these into the form fields,
+    // sharing the business-card OCR prefill path.
     var extractedContact by rememberSaveable {
-        mutableStateOf(ContactInfo())
+        mutableStateOf(
+            if (vcard != null) VCardParser.parse(vcard) else ContactInfo()
+        )
     }
 
     var isExtracting by rememberSaveable { mutableStateOf(false) }

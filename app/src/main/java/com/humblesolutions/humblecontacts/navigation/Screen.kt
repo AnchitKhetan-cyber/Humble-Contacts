@@ -1,5 +1,7 @@
 package com.humblesolutions.humblecontacts.navigation
 
+import android.net.Uri
+
 object Routes {
     const val SPLASH         = "splash"
     const val INTRO          = "intro"
@@ -9,6 +11,9 @@ object Routes {
     const val CONTACTS       = "contacts"
     const val CONTACT_DETAIL = "contact/{contactId}"
     const val ADD_CONTACT    = "add_contact"
+    // Registration pattern for the add-contact screen with an optional vCard to
+    // prefill from. Plain `add_contact` navigation still matches this (vcard = null).
+    const val ADD_CONTACT_WITH_ARGS = "add_contact?vcard={vcard}"
     const val SCAN           = "scan"
     const val PROFILE        = "profile"
 
@@ -25,4 +30,8 @@ object Routes {
 
     // Helper to build the contact detail route with a real ID
     fun contactDetail(id: String) = "contact/$id"
+
+    // Helper to build the add-contact route carrying a raw vCard string. The
+    // vCard is URL-encoded so its newlines/colons/`+` don't break the route.
+    fun addContactWithVCard(rawVCard: String) = "add_contact?vcard=${Uri.encode(rawVCard)}"
 }
