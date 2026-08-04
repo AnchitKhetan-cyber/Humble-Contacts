@@ -357,8 +357,7 @@ fun AppNavGraph(
                         }
 
                         raw.startsWith("BEGIN:VCARD") -> {
-                            val encoded = Uri.encode(raw)
-                            navController.navigate("addContact?vcard=$encoded")
+                            navController.navigate(Routes.addContactWithVCard(raw))
                         }
 
                         // ── Handle your JSON contact QR ──────────────────────────────
@@ -448,8 +447,21 @@ fun AppNavGraph(
         }
 
         // ── Add Contact ─────────────────────────────────────────────────────
-        appComposable(route = Routes.ADD_CONTACT) {
+        // Registered with an optional `vcard` argument so a scanned vCard QR can
+        // prefill the form. Plain `add_contact` navigation still matches this
+        // route with vcard defaulting to null (blank form).
+        appComposable(
+            route = Routes.ADD_CONTACT_WITH_ARGS,
+            arguments = listOf(
+                navArgument("vcard") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
             AddContactScreen(
+                vcard = backStackEntry.arguments?.getString("vcard"),
                 onBack = { navController.popBackStack() },
                 onSave = { navController.popBackStack() }
             )
