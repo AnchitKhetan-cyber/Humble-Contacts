@@ -174,8 +174,23 @@ class  ContactRepository {
         }
     }
 
+    /**
+     * Replace a duplicate contact by **updating the existing document in place**,
+     * merging only the newly captured fields.
+     *
+     * The old behaviour deleted the original and called [addContact], which minted
+     * a fresh `contactId` and dropped everything not on the incoming object — notes,
+     * media, favourite, tags — and broke any QR/deep link to the old id (ticket #8).
+     *
+     * Here we locate the duplicate, then run a single Firestore transaction that
+     * reads the existing document and writes a merged copy: the scanned fields
+     * overwrite, while `contactId`, `ownerId`, `createdAt`, `favourite`, `tags`,
+     * `media` and the prior conversation notes are preserved. Because it is one
+     * transactional write (no delete step), there is no window where the contact is
+     * missing — a mid-way failure leaves the original intact.
+     */
     suspend fun replaceContact(contact: Contact): Boolean {
-        // Find existing by email or phone and delete it
+        // Locate the existing duplicate the same way addContact flags one.
         val byEmail = if (contact.email.isNotBlank()) {
             db.collection("contacts")
                 .whereEqualTo("ownerId", uid)
@@ -190,15 +205,50 @@ class  ContactRepository {
                 .get().await()
         } else null
 
+        // No duplicate actually present — fall back to a normal fresh insert.
         val existingId = byEmail?.documents?.firstOrNull()?.id
             ?: byPhone?.documents?.firstOrNull()?.id
+            ?: return addContact(contact)
 
-        if (existingId != null) {
-            db.collection("contacts").document(existingId).delete().await()
-        }
+        val ref = db.collection("contacts").document(existingId)
 
-        // Now insert as fresh contact (reuse addContact logic)
-        return addContact(contact)
+        // Upload a freshly scanned business card first — outside the transaction,
+        // since Cloud Storage isn't transactional and the transaction body may be
+        // retried. Key it to the preserved id so the storage path stays stable.
+        val newCardUrl = if (contact.businessCardImage.isNotBlank()) {
+            uploadBusinessCard(
+                ownerId = uid,
+                contactId = existingId,
+                imageUri = Uri.parse(contact.businessCardImage)
+            )
+        } else null
+
+        return db.runTransaction { transaction ->
+            val existing = transaction.get(ref).toObject(Contact::class.java)
+                ?: return@runTransaction false
+
+            val merged = existing.copy(
+                // Newly captured fields overwrite.
+                fullName = contact.fullName,
+                jobRole = contact.jobRole,
+                company = contact.company,
+                email = contact.email,
+                phone = contact.phone,
+                linkedIn = contact.linkedIn,
+                address = contact.address,
+                meetingDate = contact.meetingDate ?: existing.meetingDate,
+                entryMethod = contact.entryMethod,
+                businessCardImage = newCardUrl ?: existing.businessCardImage,
+                // Keep prior conversation history; append any note captured now.
+                conversationNotes = existing.conversationNotes + contact.conversationNotes,
+                updatedAt = Timestamp.now()
+                // Preserved unchanged by copy(): contactId, ownerId, createdAt,
+                // favourite, tags, media, industry, meetingLocation, eventName.
+            )
+
+            transaction.set(ref, merged)
+            true
+        }.await()
     }
 
 
