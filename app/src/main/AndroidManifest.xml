@@ -78,13 +78,21 @@
             android:exported="true"
             android:theme="@style/Theme.HumbleContacts.Starting">
 
+            <!--
+              Contact-sharing App Link.
+              Host must be a domain WE control that serves a matching
+              /.well-known/assetlinks.json (see docs/applink-contact-domain-setup.md).
+              The old humblecontacts.page.link host died when Firebase Dynamic Links
+              was shut down on 25 Aug 2025. Keep this host in sync with
+              MainActivity.CONTACT_LINK_HOST.
+            -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="humblecontacts.page.link"
+                    android:host="links.humblecontacts.app"
                     android:pathPrefix="/contact/" />
             </intent-filter>
 

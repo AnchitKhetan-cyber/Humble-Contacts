@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.humblesolutions.humblecontacts",
+      "sha256_cert_fingerprints": [
+        "DD:85:21:AC:7D:F6:5F:69:5B:3F:E3:5D:9C:BC:C0:70:6A:7B:A6:60:A7:CB:A7:F6:E9:A2:16:D3:C6:56:C7:A6",
+        "PASTE_RELEASE_APP_SIGNING_SHA256_FROM_PLAY_CONSOLE"
+      ]
+    }
+  }
+]
