@@ -16,6 +16,7 @@ import com.humblesolutions.humblecontacts.data.model.ContactNote
 import com.humblesolutions.humblecontacts.data.repository.ContactRepository
 import com.humblesolutions.humblecontacts.notifications.NotificationHelper
 import com.humblesolutions.humblecontacts.utils.ContactExporter
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
 import com.google.firebase.Timestamp
 import com.humblesolutions.humblecontacts.utils.GeminiError
@@ -32,8 +33,19 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
     var isParsingCard by mutableStateOf(false)
         private set
 
+    // Holds the single active Firestore listener. Detached before re-registering
+    // and in onCleared() so listeners never stack (ticket #9).
+    private var contactsListener: ListenerRegistration? = null
+
     init {
-        repo.getContactsRealtime { result ->
+        registerContactsListener()
+    }
+
+    private fun registerContactsListener() {
+        // Detach any existing listener before attaching a new one, so exactly one
+        // is ever active regardless of how many times this is called.
+        contactsListener?.remove()
+        contactsListener = repo.getContactsRealtime { result ->
             contacts = result
             isLoading = false
         }
@@ -58,10 +70,13 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
 
     fun refreshContacts() {
         isLoading = true
-        repo.getContactsRealtime { result ->
-            contacts = result
-            isLoading = false
-        }
+        registerContactsListener()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        contactsListener?.remove()
+        contactsListener = null
     }
 
     fun parseBusinessCard(

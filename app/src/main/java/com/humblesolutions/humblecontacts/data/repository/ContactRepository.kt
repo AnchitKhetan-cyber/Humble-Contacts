@@ -5,6 +5,7 @@ import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import com.humblesolutions.humblecontacts.data.model.Contact
@@ -21,11 +22,18 @@ class  ContactRepository {
 
     private val storageRef = storage.reference
 
-    fun getContactsRealtime(onResult: (List<Contact>) -> Unit) {
+    /**
+     * Registers a realtime listener for the current user's contacts and returns the
+     * [ListenerRegistration] so the caller can detach it. Callers **must** hold the
+     * returned registration and call [ListenerRegistration.remove] before
+     * re-registering (and when their scope is cleared); discarding it leaks the
+     * listener, stacking duplicate callbacks and billable Firestore reads (ticket #9).
+     */
+    fun getContactsRealtime(onResult: (List<Contact>) -> Unit): ListenerRegistration {
 
         Log.d("CONTACT_DEBUG", "Current UID = $uid")
 
-        db.collection("contacts")
+        return db.collection("contacts")
             .whereEqualTo("ownerId", uid)
             .addSnapshotListener { snapshot, error ->
 
