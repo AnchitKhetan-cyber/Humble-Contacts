@@ -19,6 +19,7 @@ import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeUnit
 
@@ -248,7 +249,24 @@ class AuthRepository {
         is FirebaseAuthInvalidCredentialsException -> "Invalid email or password"
         is FirebaseAuthUserCollisionException      -> "An account with this email already exists"
         is FirebaseAuthWeakPasswordException       -> "Password is too weak — use 8+ characters"
+        is FirebaseFunctionsException              -> mapFunctionsError(e)
         else -> e.localizedMessage ?: "Something went wrong. Please try again."
+    }
+
+    /**
+     * Turns a Cloud Function failure into something a user can act on. The generic
+     * INTERNAL code (an unhandled server error, e.g. the confirmation email couldn't be
+     * sent) surfaces as the raw string "internal" otherwise; give it a real message.
+     */
+    private fun mapFunctionsError(e: FirebaseFunctionsException): String = when (e.code) {
+        FirebaseFunctionsException.Code.UNAUTHENTICATED ->
+            "Please sign in again and retry."
+        FirebaseFunctionsException.Code.FAILED_PRECONDITION ->
+            "No email address is associated with this account."
+        FirebaseFunctionsException.Code.NOT_FOUND ->
+            "Account deletion is temporarily unavailable. Please try again later."
+        else ->
+            "We couldn't send the confirmation email. Please try again later."
     }
 
     // ── Cloud Function deletion verification (Google sign-in) ────────────────────
