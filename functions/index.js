@@ -93,7 +93,8 @@ exports.requestAccountDeletion = functions.https.onCall(async (data, context) =>
   }
 
   const token = crypto.randomBytes(32).toString("hex");
-  await db.collection("account_deletions").doc(uid).set({
+  const ref = db.collection("account_deletions").doc(uid);
+  await ref.set({
     token,
     confirmed: false,
     email,
@@ -105,21 +106,34 @@ exports.requestAccountDeletion = functions.https.onCall(async (data, context) =>
     `https://${REGION}-${project}.cloudfunctions.net/confirmAccountDeletion` +
     `?uid=${encodeURIComponent(uid)}&token=${token}`;
 
-  const transport = await buildTransport();
-  const info = await transport.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@humblecontacts.app",
-    to: email,
-    subject: "Confirm your Humble Contacts account deletion",
-    text:
-      "You requested to permanently delete your Humble Contacts account.\n\n" +
-      "Confirm by opening this link:\n" +
-      confirmUrl +
-      "\n\nIf you didn't request this, ignore this email — your account stays safe.",
-    html:
-      `<p>You requested to permanently delete your <b>Humble Contacts</b> account.</p>` +
-      `<p><a href="${confirmUrl}">Confirm account deletion</a></p>` +
-      `<p style="color:#888;font-size:13px">If you didn't request this, ignore this email — your account stays safe.</p>`,
-  });
+  // Send the confirmation email. If this fails (e.g. bad SMTP credentials), roll back
+  // the pending token so we don't leave a stale, unconfirmable request behind, and
+  // surface a clear error to the app instead of a bare "internal" crash.
+  let info;
+  try {
+    const transport = await buildTransport();
+    info = await transport.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@humblecontacts.app",
+      to: email,
+      subject: "Confirm your Humble Contacts account deletion",
+      text:
+        "You requested to permanently delete your Humble Contacts account.\n\n" +
+        "Confirm by opening this link:\n" +
+        confirmUrl +
+        "\n\nIf you didn't request this, ignore this email — your account stays safe.",
+      html:
+        `<p>You requested to permanently delete your <b>Humble Contacts</b> account.</p>` +
+        `<p><a href="${confirmUrl}">Confirm account deletion</a></p>` +
+        `<p style="color:#888;font-size:13px">If you didn't request this, ignore this email — your account stays safe.</p>`,
+    });
+  } catch (err) {
+    functions.logger.error("Failed to send account-deletion confirmation email", err);
+    await ref.delete().catch(() => {});
+    throw new functions.https.HttpsError(
+      "internal",
+      "We couldn't send the confirmation email. Please try again later."
+    );
+  }
 
   // When using the Ethereal test fallback, log the preview URL so the email can be viewed.
   const previewUrl = nodemailer.getTestMessageUrl(info);
