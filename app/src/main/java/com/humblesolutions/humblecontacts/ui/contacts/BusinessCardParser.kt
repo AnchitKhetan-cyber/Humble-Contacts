@@ -1,90 +1,46 @@
 package com.humblesolutions.humblecontacts.ui.contacts
 
 import android.os.Parcelable
-import com.humblesolutions.humblecontacts.BuildConfig
-import com.google.ai.client.generativeai.GenerativeModel
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.android.parcel.Parcelize
+import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 object BusinessCardParser {
 
-    private val model = GenerativeModel(
-        // gemini-3.1-flash-lite is not a valid model for the generativeai:0.9.0 client,
-        // so every parse failed. gemini-2.0-flash is supported, fast and cheap.
-        modelName = "gemini-2.0-flash",
-        apiKey = BuildConfig.GEMINI_API_KEY
-    )
+    // Must match the deploy region of the `parseBusinessCard` Cloud Function (REGION in
+    // functions/index.js). The function holds the Gemini API key as a secret — the app
+    // ships no key and never calls Gemini directly.
+    private const val REGION = "us-central1"
+    private const val CALLABLE = "parseBusinessCard"
 
+    private val functions by lazy { FirebaseFunctions.getInstance(REGION) }
+
+    /**
+     * Sends the OCR text to the authenticated Cloud Function, which calls Gemini
+     * server-side and returns the parsed contact JSON. Requires a signed-in user
+     * (the callable attaches the Firebase Auth token automatically).
+     */
     suspend fun parse(text: String): ContactInfo {
+        val result = functions
+            .getHttpsCallable(CALLABLE)
+            .call(mapOf("text" to text))
+            .await()
 
-        val prompt = """
-You are an expert at extracting information from business cards.
+        @Suppress("UNCHECKED_CAST")
+        val data = result.data as? Map<String, Any?> ?: emptyMap()
 
-Extract these fields from the OCR text.
+        fun field(key: String) = (data[key] as? String).orEmpty()
 
-Return ONLY valid JSON.
-
-Do not include markdown.
-Do not include explanations.
-Do not wrap in ```.
-
-Rules:
-- "name" = person's full name only.
-- "designation" = job title.
-- "company" = organization/company name.
-- "email" = email address.
-- "phone" = mobile phone number including country code if present.
-- "linkedin" = LinkedIn profile URL or username.
-- "address" = full postal address exactly as printed on the business card. Include street, building, city, state, postal code and country if present.
-- If multiple phone numbers exist, choose the mobile number.
-- Ignore websites, QR codes, slogans and all social media except LinkedIn.
-- Never use a website URL as the address.
-- If a field is unavailable, return an empty string.
-
-JSON format:
-
-{
-  "name": "",
-  "designation": "",
-  "company": "",
-  "email": "",
-  "phone": "",
-  "linkedin": "",
-  "address": ""
-}
-
-OCR TEXT:
-
-$text
-""".trimIndent()
-
-        return try {
-
-            val response = model.generateContent(prompt)
-
-            android.util.Log.d(
-                "GEMINI_JSON",
-                response.text ?: "null"
-            )
-
-            val json = response.text
-                ?.replace("```json", "")
-                ?.replace("```", "")
-                ?.trim()
-                ?: "{}"
-
-            val contact = Json {
-                ignoreUnknownKeys = true
-            }.decodeFromString<ContactInfo>(json)
-
-            android.util.Log.d("PARSED_CONTACT", contact.toString())
-
-            return contact
-
-        } catch (e: Exception) {
-            throw e
-        }
+        return ContactInfo(
+            name = field("name"),
+            designation = field("designation"),
+            company = field("company"),
+            email = field("email"),
+            phone = field("phone"),
+            linkedin = field("linkedin"),
+            address = field("address"),
+        )
     }
 }
 
