@@ -1,9 +1,3 @@
-import java.util.Properties
-
-val localProps = Properties()
-rootProject.file("local.properties").takeIf { it.exists() }
-    ?.inputStream()?.use { localProps.load(it) }
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -27,9 +21,6 @@ android {
         versionCode = 6
         versionName = "1.0.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // Add this line:
-        buildConfigField("String", "GEMINI_API_KEY", "\"${localProps["GEMINI_API_KEY"]}\"")
     }
 
     buildTypes {
@@ -125,7 +116,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.2")
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 
     implementation(libs.kotlinx.serialization.json)
 

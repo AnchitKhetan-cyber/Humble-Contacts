@@ -20,9 +20,15 @@
  */
 
 const functions = require("firebase-functions/v1");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+
+// Gemini API key — held ONLY in the Functions secret store, never in the app.
+// Set with: firebase functions:secrets:set GEMINI_API_KEY
+const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -218,3 +224,159 @@ exports.confirmAccountDeletion = functions.https.onRequest(async (req, res) => {
     htmlPage("Account deleted", "Your account has been permanently deleted. You can close this page.")
   );
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Business-card parsing (Gemini) — server-side so the API key never ships in the
+// APK. The app posts only the OCR text; this function calls Gemini with the
+// secret-held key and returns parsed contact JSON. (v2 callable.)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GEMINI_MODEL = "gemini-2.0-flash";
+
+// Same extraction contract the app used before the key moved server-side.
+const BUSINESS_CARD_PROMPT = (text) => `You are an expert at extracting information from business cards.
+
+Extract these fields from the OCR text.
+
+Return ONLY valid JSON.
+
+Do not include markdown.
+Do not include explanations.
+Do not wrap in \`\`\`.
+
+Rules:
+- "name" = person's full name only.
+- "designation" = job title.
+- "company" = organization/company name.
+- "email" = email address.
+- "phone" = mobile phone number including country code if present.
+- "linkedin" = LinkedIn profile URL or username.
+- "address" = full postal address exactly as printed on the business card. Include street, building, city, state, postal code and country if present.
+- If multiple phone numbers exist, choose the mobile number.
+- Ignore websites, QR codes, slogans and all social media except LinkedIn.
+- Never use a website URL as the address.
+- If a field is unavailable, return an empty string.
+
+JSON format:
+
+{
+  "name": "",
+  "designation": "",
+  "company": "",
+  "email": "",
+  "phone": "",
+  "linkedin": "",
+  "address": ""
+}
+
+OCR TEXT:
+
+${text}`;
+
+const EMPTY_CONTACT = {
+  name: "",
+  designation: "",
+  company: "",
+  email: "",
+  phone: "",
+  linkedin: "",
+  address: "",
+};
+
+/**
+ * Strip markdown fences / stray prose and pull the JSON object out of Gemini's
+ * reply, then coerce it into the fixed ContactInfo shape. Never throws on
+ * malformed model output — returns empty strings so the client can't crash.
+ */
+function toContactInfo(rawText) {
+  if (!rawText) return { ...EMPTY_CONTACT };
+
+  let cleaned = String(rawText)
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  // If the model wrapped the JSON in prose, keep only the outermost { ... }.
+  const first = cleaned.indexOf("{");
+  const last = cleaned.lastIndexOf("}");
+  if (first !== -1 && last !== -1 && last > first) {
+    cleaned = cleaned.slice(first, last + 1);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (err) {
+    functions.logger.warn("Gemini returned unparseable JSON; returning empty contact.");
+    return { ...EMPTY_CONTACT };
+  }
+
+  const asString = (v) => (typeof v === "string" ? v : v == null ? "" : String(v));
+  return {
+    name: asString(parsed.name),
+    designation: asString(parsed.designation),
+    company: asString(parsed.company),
+    email: asString(parsed.email),
+    phone: asString(parsed.phone),
+    linkedin: asString(parsed.linkedin),
+    address: asString(parsed.address),
+  };
+}
+
+exports.parseBusinessCard = onCall(
+  { secrets: [GEMINI_API_KEY], region: REGION },
+  async (request) => {
+    // Require a signed-in caller — no anonymous access to the paid Gemini API.
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "You must be signed in.");
+    }
+
+    const text = request.data && typeof request.data.text === "string"
+      ? request.data.text.trim()
+      : "";
+    if (!text) {
+      throw new HttpsError("invalid-argument", "No OCR text was provided.");
+    }
+
+    const url =
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent` +
+      `?key=${encodeURIComponent(GEMINI_API_KEY.value())}`;
+
+    let res;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: BUSINESS_CARD_PROMPT(text) }] }],
+        }),
+      });
+    } catch (err) {
+      functions.logger.error("Gemini request failed", err);
+      throw new HttpsError("unavailable", "The parsing service is temporarily unavailable.");
+    }
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      functions.logger.error(`Gemini HTTP ${res.status}`, detail);
+      // Surface rate-limit distinctly; everything else is a generic upstream error.
+      if (res.status === 429) {
+        throw new HttpsError("resource-exhausted", "Too many requests. Please wait a few moments.");
+      }
+      throw new HttpsError("internal", "The parsing service returned an error.");
+    }
+
+    const body = await res.json().catch(() => null);
+    const modelText =
+      body &&
+      body.candidates &&
+      body.candidates[0] &&
+      body.candidates[0].content &&
+      body.candidates[0].content.parts &&
+      body.candidates[0].content.parts[0] &&
+      body.candidates[0].content.parts[0].text;
+
+    // Malformed/fence-wrapped output is normalised here, never on the client.
+    return toContactInfo(modelText);
+  }
+);
