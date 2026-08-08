@@ -22,6 +22,16 @@ import com.humblesolutions.humblecontacts.ui.theme.HumbleContactsTheme
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        /**
+         * Host for contact-sharing https App Links (`https://<host>/contact/{id}`).
+         * Must stay in sync with the App Links intent-filter host in AndroidManifest.xml
+         * and with the domain that serves /.well-known/assetlinks.json.
+         * See docs/applink-contact-domain-setup.md.
+         */
+        const val CONTACT_LINK_HOST = "links.humblecontacts.app"
+    }
+
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* handled silently */ }
 
@@ -68,7 +78,7 @@ class MainActivity : ComponentActivity() {
 
             HumbleContactsTheme(darkTheme = darkMode) {
                 val deepLinkContactId = intent?.data
-                    ?.takeIf { it.host == "humblecontacts.page.link" }
+                    ?.takeIf { it.host == CONTACT_LINK_HOST }
                     ?.lastPathSegment
 
                 // Returning account-deletion confirmation link: stash the URL for
