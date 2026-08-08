@@ -1,0 +1,12 @@
+{
+  "name": "firestore-rules-tests",
+  "description": "Emulator-based security-rules tests for Humble Contacts Firestore.",
+  "private": true,
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-humble-contacts \"node rules.test.js\""
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "^10.14.1"
+  }
+}
