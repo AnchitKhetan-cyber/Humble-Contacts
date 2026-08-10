@@ -127,6 +127,20 @@ class  ContactRepository {
 
     suspend fun deleteContact(contactId: String) {
         db.collection("contacts").document(contactId).delete().await()
+
+        // Best-effort: remove this contact's card image so it doesn't orphan in
+        // Storage (privacy + cost). A Storage failure must not fail the delete —
+        // the onDocumentDeleted Cloud Function is the server-side backstop.
+        try {
+            storageRef
+                .child("business_cards")
+                .child(uid)
+                .child("$contactId.jpg")
+                .delete()
+                .await()
+        } catch (e: Exception) {
+            Log.w("CONTACT_DEBUG", "Card image delete skipped for $contactId", e)
+        }
     }
 
     suspend fun toggleFavourite(contactId: String, isFavourite: Boolean) {
@@ -160,6 +174,15 @@ class  ContactRepository {
         }
 
         batch.commit().await()
+
+        // Best-effort: also clear this user's card images so none orphan in
+        // Storage. Reuses the whole-folder helper (correct here, since every
+        // contact is being removed). Non-fatal if it fails.
+        try {
+            deleteBusinessCardImages(ownerUid)
+        } catch (e: Exception) {
+            Log.w("CONTACT_DEBUG", "Bulk card image cleanup skipped for $ownerUid", e)
+        }
     }
 
     suspend fun deleteUserDocument(ownerUid: String = uid) {

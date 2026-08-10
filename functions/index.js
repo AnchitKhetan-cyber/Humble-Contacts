@@ -21,6 +21,7 @@
 
 const functions = require("firebase-functions/v1");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentDeleted } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
@@ -378,5 +379,35 @@ exports.parseBusinessCard = onCall(
 
     // Malformed/fence-wrapped output is normalised here, never on the client.
     return toContactInfo(modelText);
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Orphaned card-image cleanup (safety net). When a contact document is deleted —
+// from anywhere, including a client that fails mid-delete — remove its business
+// card image from Storage so photos of third parties' cards don't linger.
+// Path matches uploadBusinessCard: business_cards/{ownerId}/{contactId}.jpg.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.cleanupContactCardImage = onDocumentDeleted(
+  { document: "contacts/{contactId}", region: REGION },
+  async (event) => {
+    const contactId = event.params.contactId;
+    const ownerId = event.data && event.data.data() && event.data.data().ownerId;
+
+    if (!ownerId) {
+      functions.logger.warn(
+        `Deleted contact ${contactId} had no ownerId; cannot locate its card image.`
+      );
+      return;
+    }
+
+    const path = `business_cards/${ownerId}/${contactId}.jpg`;
+    try {
+      // ignoreNotFound covers already-orphaned or never-had-an-image contacts.
+      await admin.storage().bucket().file(path).delete({ ignoreNotFound: true });
+      functions.logger.log(`Cleaned up card image ${path}`);
+    } catch (err) {
+      functions.logger.error(`Failed to delete card image ${path}`, err);
+    }
   }
 );
