@@ -1,0 +1,57 @@
+rules_version = '2';
+
+// Humble Contacts — Firestore security rules.
+//
+// Model (see docs/firestore-rules.md):
+//   contacts/{id}            — random id, carries an `ownerId` field.
+//   users/{uid}              — document id IS the user's uid.
+//   account_deletions/{uid}  — document id IS the uid; the *content* is written by
+//                              the Cloud Function via the Admin SDK (which bypasses
+//                              these rules). The client only reads and deletes its own.
+//
+// Golden rule: a request is allowed only when it is authenticated AND it concerns the
+// caller's own data. Everything else is denied by the final catch-all.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Owner of an existing document (uses the stored ownerId field).
+    function ownsResource() {
+      return isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Owner asserted by an incoming write (create/update payload).
+    function ownsIncoming() {
+      return isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+    }
+
+    // Per-owner contacts. Read/update/delete are gated on the stored ownerId;
+    // create must stamp the caller as the owner so a user can't plant a doc owned
+    // by someone else.
+    match /contacts/{contactId} {
+      allow read, update, delete: if ownsResource();
+      allow create: if ownsIncoming();
+    }
+
+    // User profile documents are keyed by uid, so the doc id must equal the caller.
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Account-deletion tokens are keyed by uid and populated server-side (Admin SDK
+    // bypasses rules). The client only needs to watch and clear its own doc.
+    match /account_deletions/{userId} {
+      allow read, delete: if isSignedIn() && request.auth.uid == userId;
+      // create/update happen via the Cloud Function; deny client writes.
+    }
+
+    // Deny everything not explicitly allowed above (incl. any unused paths).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
