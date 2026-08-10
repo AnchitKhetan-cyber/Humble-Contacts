@@ -1,6 +1,9 @@
 package com.humblesolutions.humblecontacts.data.model
 
+import androidx.annotation.Keep
+
 // Event.kt
+@Keep
 data class Event(
     val eventId: String = "",
     val ownerId: String = "",

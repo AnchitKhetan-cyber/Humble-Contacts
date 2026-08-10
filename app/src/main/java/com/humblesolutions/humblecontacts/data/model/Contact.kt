@@ -1,9 +1,10 @@
 package com.humblesolutions.humblecontacts.data.model
 
+import androidx.annotation.Keep
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Exclude
-import okhttp3.Address
 
+@Keep
 data class Contact(
     val contactId: String = "",
     val ownerId: String = "",

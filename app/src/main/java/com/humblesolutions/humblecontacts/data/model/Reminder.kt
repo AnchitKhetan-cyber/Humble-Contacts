@@ -1,6 +1,9 @@
 package com.humblesolutions.humblecontacts.data.model
 
+import androidx.annotation.Keep
+
 // Reminder.kt
+@Keep
 data class Reminder(
     val reminderId: String = "",
     val ownerId: String = "",
