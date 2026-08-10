@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Humble Contacts</string>
+
+    <!-- Scanned-URL confirmation dialog (ticket #14) -->
+    <string name="qr_open_link_title">Open this link?</string>
+    <string name="qr_open_link_prompt">This code wants to open:</string>
+    <string name="qr_open_link_confirm">Open link</string>
+    <string name="qr_open_link_cancel">Cancel</string>
+    <string name="qr_open_link_icon_desc">Warning: external link</string>
+    <string name="qr_open_link_unknown_host">an unknown site</string>
+    <string name="qr_unreadable">Couldn\'t read this QR code.</string>
 </resources>
