@@ -25,7 +25,10 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: shrink + obfuscate code and strip unused resources. Keep rules for
+            // reflectively-used classes (Firestore models) live in proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

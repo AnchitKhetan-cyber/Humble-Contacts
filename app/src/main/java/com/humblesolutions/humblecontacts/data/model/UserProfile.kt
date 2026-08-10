@@ -1,8 +1,10 @@
 package com.humblesolutions.humblecontacts.data.model
 
+import androidx.annotation.Keep
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.PropertyName
 
+@Keep
 data class UserProfile(
     val userId: String = "",
 
