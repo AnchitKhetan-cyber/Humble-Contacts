@@ -3,7 +3,6 @@ package com.humblesolutions.humblecontacts.navigation
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -16,8 +15,27 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.humblesolutions.humblecontacts.R
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NamedNavArgument
@@ -343,6 +361,12 @@ fun AppNavGraph(
 
         // ── Home ────────────────────────────────────────────────────────────
         appComposable(route = Routes.HOME) {
+            // A scanned http(s) URL pending user confirmation. We never open an
+            // external link straight from a scan — a stranger's QR could point
+            // anywhere (phishing). The dialog below names the destination host
+            // first; only confirming opens the browser. (ticket #14)
+            var pendingUrl by remember { mutableStateOf<String?>(null) }
+
             HomeScreen(
                 onNavigateToContacts = { navController.navigate(Routes.CONTACTS) },
                 onNavigateToContact  = { id -> navController.navigate(Routes.contactDetail(id)) },
@@ -395,22 +419,42 @@ fun AppNavGraph(
                         }
 
                         raw.startsWith("http://") || raw.startsWith("https://") -> {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(raw))
-                            context.startActivity(intent)
+                            // Don't open immediately — stash it and let the user
+                            // confirm the destination host first.
+                            pendingUrl = raw
                         }
 
                         else -> {
-                            Log.d("QR_CONTENT", raw)
-
+                            // Unknown payload: never echo attacker-controlled text
+                            // verbatim. Show a fixed, safe message instead.
                             Toast.makeText(
                                 context,
-                                raw,
-                                Toast.LENGTH_LONG
+                                context.getString(R.string.qr_unreadable),
+                                Toast.LENGTH_SHORT
                             ).show()
                         }
                     }
                 }
             )
+
+            pendingUrl?.let { url ->
+                QrLinkConfirmDialog(
+                    url = url,
+                    onConfirm = {
+                        pendingUrl = null
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        }.onFailure {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.qr_unreadable),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    onDismiss = { pendingUrl = null }
+                )
+            }
         }
 
         // ── Contacts ────────────────────────────────────────────────────────
@@ -543,4 +587,85 @@ fun AppNavGraph(
             )
         }
     }
+}
+
+/**
+ * Confirmation shown before opening a scanned http(s) URL. Names the destination
+ * host prominently so a look-alike domain is noticeable, and shows the full URL
+ * (sanitised + truncated) beneath. Nothing opens unless the user confirms. (#14)
+ */
+@Composable
+private fun QrLinkConfirmDialog(
+    url: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val host = hostForDisplay(url)
+    val safeUrl = sanitizeForDisplay(url)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Outlined.Warning,
+                contentDescription = stringResource(R.string.qr_open_link_icon_desc),
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = { Text(stringResource(R.string.qr_open_link_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.qr_open_link_prompt))
+                Spacer(Modifier.height(8.dp))
+                // Host, prominent — this is the part users should actually read.
+                Text(
+                    text = host,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(4.dp))
+                // Full URL, de-emphasised and truncated.
+                Text(
+                    text = safeUrl,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.qr_open_link_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.qr_open_link_cancel))
+            }
+        }
+    )
+}
+
+/** Best-effort host for display; falls back to a fixed label if unparseable. */
+@Composable
+private fun hostForDisplay(url: String): String {
+    val host = runCatching { Uri.parse(url).host }.getOrNull()
+    return host?.lowercase()?.removePrefix("www.")
+        ?: stringResource(R.string.qr_open_link_unknown_host)
+}
+
+/**
+ * Strip control / non-printable characters and cap length so scanned,
+ * attacker-controlled text can never be rendered raw. Used for the URL preview
+ * and reusable for any untrusted payload.
+ */
+private fun sanitizeForDisplay(raw: String, max: Int = 120): String {
+    val cleaned = raw
+        .filter { it == ' ' || !it.isISOControl() }
+        .trim()
+    return if (cleaned.length > max) cleaned.take(max) + "…" else cleaned
 }
