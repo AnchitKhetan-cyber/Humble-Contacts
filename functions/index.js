@@ -231,7 +231,10 @@ exports.confirmAccountDeletion = functions.https.onRequest(async (req, res) => {
 // secret-held key and returns parsed contact JSON. (v2 callable.)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+// Earlier gemini-2.0-flash / gemini-2.5-flash were retired (HTTP 404
+// "no longer available"). gemini-3.1-flash-lite is the current fast, low-cost
+// model for this text-extraction workload.
+const GEMINI_MODEL = "gemini-3.1-flash-lite";
 
 // Same extraction contract the app used before the key moved server-side.
 const BUSINESS_CARD_PROMPT = (text) => `You are an expert at extracting information from business cards.
