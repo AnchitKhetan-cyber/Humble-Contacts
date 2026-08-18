@@ -131,15 +131,23 @@ class  ContactRepository {
         // Best-effort: remove this contact's card image so it doesn't orphan in
         // Storage (privacy + cost). A Storage failure must not fail the delete —
         // the onDocumentDeleted Cloud Function is the server-side backstop.
-        try {
-            storageRef
-                .child("business_cards")
-                .child(uid)
-                .child("$contactId.jpg")
-                .delete()
-                .await()
-        } catch (e: Exception) {
-            Log.w("CONTACT_DEBUG", "Card image delete skipped for $contactId", e)
+        // Guard a blank uid: it would build the malformed path
+        // `business_cards//$contactId.jpg` and target the wrong prefix. If we have
+        // no signed-in uid the backstop function still covers the cleanup.
+        val ownerUid = uid
+        if (ownerUid.isBlank()) {
+            Log.w("CONTACT_DEBUG", "No uid; leaving card image cleanup for $contactId to the backstop")
+        } else {
+            try {
+                storageRef
+                    .child("business_cards")
+                    .child(ownerUid)
+                    .child("$contactId.jpg")
+                    .delete()
+                    .await()
+            } catch (e: Exception) {
+                Log.w("CONTACT_DEBUG", "Card image delete skipped for $contactId", e)
+            }
         }
     }
 
@@ -196,12 +204,20 @@ class  ContactRepository {
      * Best-effort deletion of the user's uploaded business-card images at
      * `business_cards/<uid>/…`. Cloud Storage has no folder delete, so we list
      * the folder and delete each file. Callers should treat failures as non-fatal.
+     *
+     * Each item delete is isolated: one failing object (already gone, transient
+     * error) is logged and skipped so it can't abort the loop and leave the
+     * remaining images orphaned.
      */
     suspend fun deleteBusinessCardImages(ownerUid: String = uid) {
         val folder = storageRef.child("business_cards").child(ownerUid)
         val listing = folder.listAll().await()
         listing.items.forEach { item ->
-            item.delete().await()
+            try {
+                item.delete().await()
+            } catch (e: Exception) {
+                Log.w("CONTACT_DEBUG", "Card image delete skipped for ${item.path}", e)
+            }
         }
     }
 
