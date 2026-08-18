@@ -749,7 +749,7 @@ fun AddContactScreen(
                         jobRole = jobRole.trim(),
                         company = company.trim(),
                         email = email.trim(),
-                        phone = "${selectedCountry.dialCode} ${phone.trim()}",
+                        phone = if (phone.isBlank()) "" else "${selectedCountry.dialCode} ${phone.trim()}",
                         linkedIn = linkedInUrl,
                         address = address.trim(),
                         notes = notes.trim(),
@@ -822,7 +822,7 @@ fun AddContactScreen(
                         saveToDeviceContacts(
                             context = context,
                             name = fullName,
-                            phone = "${selectedCountry.dialCode} ${phone.trim()}",
+                            phone = if (phone.isBlank()) "" else "${selectedCountry.dialCode} ${phone.trim()}",
                             email = email,
                             company = company,
                             jobRole = jobRole
@@ -878,7 +878,7 @@ fun AddContactScreen(
                             jobRole = jobRole.trim(),
                             company = company.trim(),
                             email = email.trim(),
-                            phone = "${selectedCountry.dialCode} ${phone.trim()}",
+                            phone = if (phone.isBlank()) "" else "${selectedCountry.dialCode} ${phone.trim()}",
                             linkedIn = linkedInUrl,
                             address = address.trim(),
                             notes = notes.trim(),
