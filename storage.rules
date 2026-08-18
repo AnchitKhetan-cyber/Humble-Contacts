@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Business-card images: business_cards/{ownerUid}/{contactId}.jpg
+    // Owner-only. `write` covers create, update AND delete — so this both
+    // protects other users' cards and permits the owner's cleanup delete.
+    match /business_cards/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Contact media: contacts/{contactId}/media/{fileName}
+    // The path carries no uid, so authorise by looking up the contact
+    // document's ownerId in Firestore. Requires the contacts/{contactId}
+    // document to exist (it always does — media is only added from an
+    // existing contact's detail screen).
+    match /contacts/{contactId}/media/{fileName} {
+      allow read, write: if request.auth != null
+        && firestore.get(/databases/(default)/documents/contacts/$(contactId)).data.ownerId == request.auth.uid;
+    }
+
+    // Any other path is denied by default (no matching rule = no access).
+  }
+}
