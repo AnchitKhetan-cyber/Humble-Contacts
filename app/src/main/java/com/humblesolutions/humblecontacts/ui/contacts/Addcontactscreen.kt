@@ -80,6 +80,12 @@ fun AddContactScreen(
     var notes     by rememberSaveable { mutableStateOf("") }
     var eventName by rememberSaveable { mutableStateOf("") }
     var location  by rememberSaveable { mutableStateOf("") }
+    var tags      by rememberSaveable(
+        stateSaver = androidx.compose.runtime.saveable.listSaver(
+            save = { it },
+            restore = { it }
+        )
+    ) { mutableStateOf(emptyList<String>()) }
     var nameError by rememberSaveable { mutableStateOf(false) }
     var isSaving  by rememberSaveable { mutableStateOf(false) }
 
@@ -723,6 +729,16 @@ fun AddContactScreen(
                 )
             }
 
+            Spacer(Modifier.height(16.dp))
+
+            // ── Tags ─────────────────────────────────────────────────────────
+            SectionCard(title = "Tags") {
+                TagEditor(
+                    tags = tags,
+                    onTagsChange = { tags = it }
+                )
+            }
+
             Spacer(Modifier.height(24.dp))
 
             // ── Save button ──────────────────────────────────────────────────
@@ -753,7 +769,8 @@ fun AddContactScreen(
                         linkedIn = linkedInUrl,
                         address = address.trim(),
                         notes = notes.trim(),
-                        imageUri = imageUris.firstOrNull()
+                        imageUri = imageUris.firstOrNull(),
+                        tags = tags
                     ) { added ->
 
                         isSaving = false
@@ -882,7 +899,8 @@ fun AddContactScreen(
                             linkedIn = linkedInUrl,
                             address = address.trim(),
                             notes = notes.trim(),
-                            imageUri = imageUris.firstOrNull()
+                            imageUri = imageUris.firstOrNull(),
+                            tags = tags
                         ) {
                             isSaving = false
 
