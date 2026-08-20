@@ -114,6 +114,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         address: String,
         notes: String,
         imageUri: Uri?,
+        tags: List<String> = emptyList(),
         onResult: (Boolean) -> Unit
     ) {
         viewModelScope.launch {
@@ -126,6 +127,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
                 linkedIn = linkedIn,
                 address = address,
                 businessCardImage = imageUri?.toString() ?: "",
+                tags = tags,
                 conversationNotes =
                     if (notes.isBlank()) emptyList()
                     else listOf(ContactNote(text = notes.trim(), createdAt = Timestamp.now())),
@@ -177,6 +179,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         address: String,
         notes: String,
         imageUri: Uri?,
+        tags: List<String> = emptyList(),
         onDone: () -> Unit
     ) {
         viewModelScope.launch {
@@ -189,6 +192,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
                 linkedIn = linkedIn,
                 address = address,
                 businessCardImage = imageUri?.toString() ?: "",
+                tags = tags,
                 conversationNotes = if (notes.isBlank()) emptyList()
                 else listOf(ContactNote(text = notes.trim(), createdAt = Timestamp.now())),
                 meetingDate = Timestamp.now(),

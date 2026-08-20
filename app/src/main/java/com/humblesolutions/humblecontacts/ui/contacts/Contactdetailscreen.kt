@@ -440,7 +440,19 @@ fun ContactDetailScreen(
             Spacer(Modifier.height(16.dp))
 
             when (selectedTab) {
-                0 -> OverviewTab(contact = c)
+                0 -> OverviewTab(
+                    contact = c,
+                    onTagsChange = { updatedTags ->
+                        // Mirror the inline note-edit persistence: write to
+                        // Firestore and update local state so the change sticks
+                        // across reloads.
+                        Firebase.firestore
+                            .collection("contacts")
+                            .document(c.contactId)
+                            .update("tags", updatedTags)
+                        contact = c.copy(tags = updatedTags)
+                    }
+                )
                 1 -> NotesTab(
                     notes = c.conversationNotes,
 
@@ -910,7 +922,10 @@ fun ContactDetailScreen(
 // ─── Overview Tab — real data ─────────────────────────────────────────────────
 
 @Composable
-private fun OverviewTab(contact: Contact) {
+private fun OverviewTab(
+    contact: Contact,
+    onTagsChange: (List<String>) -> Unit
+) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
 
         // Contact info card
@@ -1010,32 +1025,23 @@ private fun OverviewTab(contact: Contact) {
             }
         }
 
-        // Tags
-        if (contact.tags.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp,
-                shadowElevation = 2.dp
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Tags", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(Modifier.height(10.dp))
-                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        contact.tags.forEach { tag ->
-                            Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                                Text(
-                                    tag,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
+        // Tags — always shown so the first tag can be added inline. The editor
+        // renders removable chips plus an add field; each change persists via
+        // onTagsChange (ticket #16).
+        Spacer(Modifier.height(16.dp))
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 1.dp,
+            shadowElevation = 2.dp
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Tags", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                Spacer(Modifier.height(10.dp))
+                TagEditor(
+                    tags = contact.tags,
+                    onTagsChange = onTagsChange
+                )
             }
         }
     }

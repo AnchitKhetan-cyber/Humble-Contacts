@@ -293,9 +293,13 @@ class  ContactRepository {
                 businessCardImage = newCardUrl ?: existing.businessCardImage,
                 // Keep prior conversation history; append any note captured now.
                 conversationNotes = existing.conversationNotes + contact.conversationNotes,
+                // Union existing tags with any captured on this scan (case-insensitive,
+                // preserving order) so replacing a duplicate never drops tags (#16).
+                tags = (existing.tags + contact.tags)
+                    .distinctBy { it.trim().lowercase() },
                 updatedAt = Timestamp.now()
                 // Preserved unchanged by copy(): contactId, ownerId, createdAt,
-                // favourite, tags, media, industry, meetingLocation, eventName.
+                // favourite, media, industry, meetingLocation, eventName.
             )
 
             transaction.set(ref, merged)
