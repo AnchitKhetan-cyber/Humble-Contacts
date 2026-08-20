@@ -81,8 +81,12 @@ class  ContactRepository {
             return false
         }
 
+        // Only match on phone when an actual number was entered. An empty field
+        // can be stored as a bare dial code (e.g. "+91 "), which is non-blank but
+        // carries no digits — matching on it would flag every phoneless contact
+        // as a duplicate of the first. Require at least one digit.
         val existingPhone =
-            if (contact.phone.isNotBlank()) {
+            if (contact.phone.any { it.isDigit() }) {
                 db.collection("contacts")
                     .whereEqualTo("ownerId", uid)
                     .whereEqualTo("phone", contact.phone)
@@ -245,7 +249,8 @@ class  ContactRepository {
                 .get().await()
         } else null
 
-        val byPhone = if (contact.phone.isNotBlank()) {
+        // Same digit guard as addContact: never match on a digit-less phone.
+        val byPhone = if (contact.phone.any { it.isDigit() }) {
             db.collection("contacts")
                 .whereEqualTo("ownerId", uid)
                 .whereEqualTo("phone", contact.phone)
