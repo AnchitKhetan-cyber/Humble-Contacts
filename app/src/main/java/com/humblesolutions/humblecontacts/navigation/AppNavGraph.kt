@@ -526,9 +526,10 @@ fun AppNavGraph(
             )
         }
 
-        // ── Scan ────────────────────────────────────────────────────────────
-        // TODO: Replace with a dedicated ScanScreen once it is implemented;
-        // AddContactScreen is reused here as a temporary placeholder.
+        // ── Add Contact (middle nav tab) ────────────────────────────────────
+        // This tab is the Add-Contact entry point — the bottom bar labels it
+        // "Add" (ticket #21). It opens AddContactScreen directly; QR scanning
+        // lives on the Home top bar.
         appComposable(route = Routes.SCAN) {
             AddContactScreen(
                 onBack = { navController.popBackStack() },

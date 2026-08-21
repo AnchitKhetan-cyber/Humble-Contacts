@@ -30,7 +30,9 @@ fun BottomNavBar(
     val items = listOf(
         NavItem(NavTab.HOME,     Icons.Outlined.Home,        "Home"),
         NavItem(NavTab.CONTACTS, Icons.Outlined.People,      "Contacts"),
-        NavItem(NavTab.SCAN,     Icons.Outlined.QrCodeScanner,"Scan"),
+        // This tab opens the Add Contact form (not a scanner), so it's labelled
+        // and iconed as "Add" to match what it actually does (ticket #21).
+        NavItem(NavTab.SCAN,     Icons.Outlined.PersonAdd,   "Add"),
         NavItem(NavTab.PROFILE,  Icons.Outlined.Person,      "Profile"),
     )
 
