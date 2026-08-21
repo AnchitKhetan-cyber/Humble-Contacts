@@ -181,17 +181,21 @@ fun AddContactScreen(
     val context = LocalContext.current
 
 
+    // URI the camera writes the full-resolution capture into. Held across the
+    // launch so the result callback (which only reports success/failure) knows
+    // which file was written.
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
     val cameraLauncher =
         rememberLauncherForActivityResult(
-            ActivityResultContracts.TakePicturePreview()
-        ) { bitmap ->
+            ActivityResultContracts.TakePicture()
+        ) { success ->
 
-            bitmap?.let {
-
-                val uri = saveBitmapAndReturnUri(context, it)
-
+            val uri = pendingCameraUri
+            if (success && uri != null) {
                 imageUris = imageUris + uri
             }
+            pendingCameraUri = null
         }
 
     val galleryLauncher =
@@ -227,7 +231,9 @@ fun AddContactScreen(
         ) { granted ->
             if (granted) {
                 cameraDenialCount = 0
-                cameraLauncher.launch(null)
+                val uri = createImageCaptureUri(context)
+                pendingCameraUri = uri
+                cameraLauncher.launch(uri)
             } else {
                 cameraDenialCount++
                 // Only surface the Settings dialog once the user has denied twice.
@@ -457,7 +463,9 @@ fun AddContactScreen(
                             ) == PackageManager.PERMISSION_GRANTED
 
                             if (hasCameraPermission) {
-                                cameraLauncher.launch(null)
+                                val uri = createImageCaptureUri(context)
+                                pendingCameraUri = uri
+                                cameraLauncher.launch(uri)
                             } else {
                                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                             }
