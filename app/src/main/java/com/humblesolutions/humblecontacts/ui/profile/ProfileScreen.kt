@@ -360,7 +360,7 @@ fun ProfileScreen(
                         iconBg          = MaterialTheme.colorScheme.primaryContainer,
                         iconTint        = MaterialTheme.colorScheme.primary,
                         title           = "Notifications",
-                        subtitle        = "Get reminders and updates",
+                        subtitle        = "Get updates about your contacts",
                         checked         = notificationsEnabled,
                         onCheckedChange = { settingsViewModel.setNotifications(it) }
                     )
