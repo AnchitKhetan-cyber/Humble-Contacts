@@ -157,7 +157,14 @@ class  ContactRepository {
                 )
             }
 
-            ref.set(finalContact).await()
+            // Do NOT await the write's server acknowledgement. With offline
+            // persistence the write is applied to the local cache immediately (and
+            // the realtime listener reflects it right away), but the returned Task
+            // only completes once the server confirms — so awaiting it hangs the UI
+            // on "Saving…" until reconnect (ticket #28). Fire it and treat the local
+            // commit as success; a genuine sync failure is logged.
+            ref.set(finalContact)
+                .addOnFailureListener { Log.e("CONTACT_DEBUG", "Contact failed to sync to server", it) }
 
             AddContactResult.Success(ref.id)
         } catch (e: Exception) {
@@ -201,9 +208,12 @@ class  ContactRepository {
     }
 
     suspend fun updateContact(contact: Contact) {
+        // Fire-and-forget for the same offline reason as addContact (#28): the
+        // local cache updates instantly and the listener reflects it, but awaiting
+        // the server ack would hang the edit screen on "Updating…" until reconnect.
         db.collection("contacts").document(contact.contactId)
             .set(contact.copy(updatedAt = com.google.firebase.Timestamp.now()))
-            .await()
+            .addOnFailureListener { Log.e("CONTACT_DEBUG", "Contact update failed to sync", it) }
     }
 
     // NOTE on account deletion: these three take an explicit [ownerUid] because
