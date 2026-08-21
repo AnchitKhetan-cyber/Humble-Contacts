@@ -195,7 +195,8 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
 
     fun filtered(
         searchQuery: String,
-        selectedFilter: String
+        selectedFilter: String,
+        selectedValue: String? = null
     ): List<Contact> {
         return contacts.filter { contact ->
             val matchesSearch =
@@ -204,14 +205,37 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
                     contact.company.contains(searchQuery, ignoreCase = true) ||
                     contact.jobRole.contains(searchQuery, ignoreCase = true)
 
+            // "By …" chips filter to a value the user picked from that chip's
+            // dropdown. With no value chosen yet the dimension matches nothing,
+            // so the list stays empty until a value is selected.
             val matchesFilter = when (selectedFilter) {
                 "All" -> true
-                else  -> true
+                "Favourites" -> contact.favourite
+                "By Industry" -> selectedValue != null && contact.industry == selectedValue
+                "By Event" -> selectedValue != null && contact.eventName == selectedValue
+                "By Date" -> selectedValue != null && contact.metOn == selectedValue
+                else -> true
             }
 
             matchesSearch && matchesFilter
         }
     }
+
+    /** Distinct non-blank industries across the user's contacts, sorted. */
+    fun industries(): List<String> =
+        contacts.map { it.industry }.filter { it.isNotBlank() }.distinct().sorted()
+
+    /** Distinct non-blank event names across the user's contacts, sorted. */
+    fun events(): List<String> =
+        contacts.map { it.eventName }.filter { it.isNotBlank() }.distinct().sorted()
+
+    /** Distinct meeting dates (formatted via [Contact.metOn]), newest first. */
+    fun meetingDates(): List<String> =
+        contacts.filter { it.meetingDate != null }
+            .sortedByDescending { it.meetingDate?.seconds ?: 0L }
+            .map { it.metOn }
+            .filter { it.isNotBlank() }
+            .distinct()
 
     fun replaceContact(
         fullName: String,

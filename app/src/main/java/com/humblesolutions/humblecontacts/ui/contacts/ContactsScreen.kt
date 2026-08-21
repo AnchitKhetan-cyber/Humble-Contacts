@@ -43,24 +43,19 @@ fun ContactsScreen(
     val viewModel: ContactViewModel = viewModel()
 
     val filterTabs = listOf("All", "Favourites", "By Industry", "By Event", "By Date")
+    // Chips that filter to a value the user picks from a dropdown.
+    val dimensionTabs = setOf("By Industry", "By Event", "By Date")
     var selectedFilter by remember { mutableStateOf("All") }
+    // The value chosen from a dimension chip's dropdown (null = none picked).
+    var selectedFilterValue by remember { mutableStateOf<String?>(null) }
+    // Which dimension chip's dropdown is currently open (null = none).
+    var dropdownFor by remember { mutableStateOf<String?>(null) }
     var searchQuery    by remember { mutableStateOf("") }
 
-    val filtered by remember(viewModel.contacts, searchQuery, selectedFilter) {
+    val filtered by remember(viewModel.contacts, searchQuery, selectedFilter, selectedFilterValue) {
         mutableStateOf(
-            when (selectedFilter) {
-                "Favourites" -> viewModel.contacts.filter { it.favourite }
-                else -> viewModel.filtered(searchQuery, selectedFilter)
-                    .sortedByDescending { it.favourite }
-            }.let { list ->
-                if (selectedFilter == "Favourites" && searchQuery.isNotBlank())
-                    list.filter {
-                        it.fullName.contains(searchQuery, ignoreCase = true) ||
-                        it.company.contains(searchQuery, ignoreCase = true) ||
-                        it.jobRole.contains(searchQuery, ignoreCase = true)
-                    }
-                else list
-            }
+            viewModel.filtered(searchQuery, selectedFilter, selectedFilterValue)
+                .sortedByDescending { it.favourite }
         )
     }
 
@@ -105,7 +100,11 @@ fun ContactsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    if (selectedFilter == "Favourites") "Favourites" else "All Contacts",
+                    when {
+                        selectedFilter == "All" -> "All Contacts"
+                        selectedFilterValue != null -> selectedFilterValue!!
+                        else -> selectedFilter
+                    },
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold
                     ),
@@ -152,36 +151,93 @@ fun ContactsScreen(
             ) {
                 filterTabs.forEach { tab ->
                     val isSelected = tab == selectedFilter
-                    Surface(
-                        onClick = { selectedFilter = tab },
-                        shape = RoundedCornerShape(20.dp),
-                        color = if (isSelected)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    val isDimension = tab in dimensionTabs
+                    // Distinct values available for a dimension chip's dropdown.
+                    val values = when (tab) {
+                        "By Industry" -> viewModel.industries()
+                        "By Event" -> viewModel.events()
+                        "By Date" -> viewModel.meetingDates()
+                        else -> emptyList()
+                    }
+
+                    Box {
+                        Surface(
+                            onClick = {
+                                when {
+                                    !isDimension -> {
+                                        // All / Favourites: plain toggle, clear any picked value.
+                                        selectedFilter = tab
+                                        selectedFilterValue = null
+                                        dropdownFor = null
+                                    }
+                                    values.isEmpty() -> {
+                                        // No data behind this dimension yet — select it so the
+                                        // list shows the empty state for it.
+                                        selectedFilter = tab
+                                        selectedFilterValue = null
+                                        dropdownFor = null
+                                    }
+                                    else -> dropdownFor = tab   // open the value picker
+                                }
+                            },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant
                         ) {
-                            if (tab == "Favourites") {
-                                Icon(
-                                    Icons.Filled.Star,
-                                    contentDescription = null,
-                                    tint = if (isSelected) Color(0xFFFFD700)
-                                           else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(13.dp)
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (tab == "Favourites") {
+                                    Icon(
+                                        Icons.Filled.Star,
+                                        contentDescription = null,
+                                        tint = if (isSelected) Color(0xFFFFD700)
+                                               else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                                Text(
+                                    text = if (isSelected && selectedFilterValue != null)
+                                        "$tab: $selectedFilterValue"
+                                    else tab,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold
+                                                 else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                                if (isDimension) {
+                                    Icon(
+                                        Icons.Outlined.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                               else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
-                            Text(
-                                text = tab,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold
-                                             else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        }
+
+                        if (isDimension) {
+                            DropdownMenu(
+                                expanded = dropdownFor == tab,
+                                onDismissRequest = { dropdownFor = null }
+                            ) {
+                                values.forEach { value ->
+                                    DropdownMenuItem(
+                                        text = { Text(value) },
+                                        onClick = {
+                                            selectedFilter = tab
+                                            selectedFilterValue = value
+                                            dropdownFor = null
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -190,26 +246,55 @@ fun ContactsScreen(
             Spacer(Modifier.height(16.dp))
 
             // ── List ─────────────────────────────────────────────────────────
-            if (filtered.isEmpty() && selectedFilter == "Favourites") {
+            if (filtered.isEmpty() && selectedFilter != "All") {
+                // Per-filter empty state. Favourites keeps its star + hint; the
+                // dimension chips explain that no data exists for them yet.
+                val (emptyIcon, emptyTitle, emptyHint) = when (selectedFilter) {
+                    "Favourites" -> Triple(
+                        Icons.Filled.Star,
+                        "No favourites yet",
+                        "Tap the ★ on any contact to add it here"
+                    )
+                    "By Industry" -> Triple(
+                        Icons.Outlined.Business,
+                        "No industries yet",
+                        "Add an industry to a contact to filter by it"
+                    )
+                    "By Event" -> Triple(
+                        Icons.Outlined.Event,
+                        "No events yet",
+                        "Contacts captured at an event will appear here"
+                    )
+                    "By Date" -> Triple(
+                        Icons.Outlined.CalendarMonth,
+                        "No dated contacts yet",
+                        "Contacts with a meeting date will appear here"
+                    )
+                    else -> Triple(
+                        Icons.Outlined.FilterList,
+                        "Nothing here",
+                        "No contacts match this filter"
+                    )
+                }
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            Icons.Filled.Star,
+                            emptyIcon,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "No favourites yet",
+                            emptyTitle,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "Tap the ★ on any contact to add it here",
+                            emptyHint,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
