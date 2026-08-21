@@ -948,7 +948,7 @@ fun AddContactScreen(
 // ─── Shared Composables ───────────────────────────────────────────────────────
 
 @Composable
-private fun SectionCard(
+internal fun SectionCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -973,7 +973,7 @@ private fun SectionCard(
 }
 
 @Composable
-private fun ContactTextField(
+internal fun ContactTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
