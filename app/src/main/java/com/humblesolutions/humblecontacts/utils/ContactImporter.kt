@@ -25,8 +25,18 @@ object ContactImporter {
         val rows = tokenize(csv)
         if (rows.isEmpty()) return ImportResult(emptyList(), 0)
 
-        val header = rows.first().map { it.trim().lowercase() }
-        val dataRows = rows.drop(1)
+        // Find the header row rather than assuming it's the first line: this app's
+        // own export writes a title + metadata preamble (and a blank line) before
+        // the real "Full Name,…" header. The header is the first row that contains
+        // a "full name" cell; anything before it is preamble and ignored. A plain
+        // CSV with the header on line 1 is matched there just the same.
+        val headerIdx = rows.indexOfFirst { row ->
+            row.any { it.trim().lowercase() == "full name" }
+        }
+        if (headerIdx == -1) return ImportResult(emptyList(), 0)
+
+        val header = rows[headerIdx].map { it.trim().lowercase() }
+        val dataRows = rows.drop(headerIdx + 1)
 
         val contacts = mutableListOf<Contact>()
         var skipped = 0

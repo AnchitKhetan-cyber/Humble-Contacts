@@ -107,4 +107,33 @@ class ContactImporterTest {
         val result = ContactImporter.parse("Full Name\nAlice")
         assertEquals("import", result.contacts.first().entryMethod)
     }
+
+    @Test
+    fun `skips the export preamble and finds the real header row`() {
+        // Mirrors ContactExporter's output: title + metadata + blank line, then
+        // the header. The importer must round-trip its own export.
+        val csv = """
+            HUMBLE CONTACTS EXPORT
+            Generated On,21 Aug 2026 21:42
+            Total Contacts,1
+            Exported By,Humble Contacts
+
+            Full Name,Job Role,Company,Email
+            "Aarav Gupta","EB","GDG","aarav@x.com"
+        """.trimIndent()
+
+        val result = ContactImporter.parse(csv)
+
+        assertEquals(1, result.contacts.size)
+        val c = result.contacts.first()
+        assertEquals("Aarav Gupta", c.fullName)
+        assertEquals("GDG", c.company)
+        assertEquals("aarav@x.com", c.email)
+    }
+
+    @Test
+    fun `no header row present yields no contacts`() {
+        val csv = "Some Title\nGenerated On,today\nrandom,data"
+        assertTrue(ContactImporter.parse(csv).contacts.isEmpty())
+    }
 }
