@@ -53,6 +53,15 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        unitTests {
+            // Let android.util.Log (and other stubbed framework calls) return
+            // defaults instead of throwing, so pure-logic unit tests can run
+            // without Robolectric (ticket #24).
+            isReturnDefaultValues = true
+        }
+    }
+
 
 }
 

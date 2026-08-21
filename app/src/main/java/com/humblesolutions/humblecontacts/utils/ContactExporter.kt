@@ -13,7 +13,8 @@ import java.util.Locale
 
 object ContactExporter {
 
-    private fun csv(value: Any?): String {
+    // `internal` (not private) so the CSV escaping can be unit-tested (#24).
+    internal fun csv(value: Any?): String {
         return "\"${value?.toString()?.replace("\"", "\"\"") ?: ""}\""
     }
 
