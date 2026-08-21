@@ -85,8 +85,8 @@ object ContactExporter {
 
                     writer.appendLine(
                         "Full Name,Job Role,Company,Industry," +
-                                "Email,Phone,Tags,Meeting Location," +
-                                "Event Name,Notes,Created At"
+                                "Email,Phone,Tags,Meeting Location,Met On," +
+                                "Event Name,Notes,Created At,Updated At"
                     )
 
                     contacts.forEach { contact ->
@@ -116,9 +116,11 @@ object ContactExporter {
                                 csv(contact.phone),
                                 csv(contact.tags.joinToString("; ")),
                                 csv(contact.meetingLocation),
+                                csv(meetingDate),
                                 csv(contact.eventName),
                                 csv(contact.conversationNotes.joinToString(" | ")),
-                                csv(createdAt)
+                                csv(createdAt),
+                                csv(updatedAt)
                             ).joinToString(",")
                         )
                     }
