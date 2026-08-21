@@ -11,8 +11,13 @@ import androidx.lifecycle.ViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
+import android.net.Uri
+import androidx.lifecycle.viewModelScope
 import com.humblesolutions.humblecontacts.data.model.Contact
+import com.humblesolutions.humblecontacts.data.repository.ContactRepository
 import com.humblesolutions.humblecontacts.utils.ContactExporter
+import com.humblesolutions.humblecontacts.utils.ContactImporter
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 class HomeViewModel : ViewModel() {
@@ -20,6 +25,8 @@ class HomeViewModel : ViewModel() {
     private val db = Firebase.firestore
     private val auth = Firebase.auth
     private val uid get() = auth.currentUser?.uid ?: ""
+
+    private val repo = ContactRepository()
 
     var contacts by mutableStateOf<List<Contact>>(emptyList())
         private set
@@ -68,6 +75,62 @@ class HomeViewModel : ViewModel() {
                 "Export failed",
             Toast.LENGTH_LONG
         ).show()
+    }
+
+    var isImporting by mutableStateOf(false)
+        private set
+
+    /**
+     * Imports contacts from a picked CSV [uri]: reads the file, parses it
+     * ([ContactImporter], header-name mapped), then inserts each contact via the
+     * repository — which skips duplicates by email/phone. Reports how many were
+     * imported vs skipped; the realtime listener refreshes the list.
+     */
+    fun importContacts(context: Context, uri: Uri) {
+        if (isImporting) return
+        isImporting = true
+        viewModelScope.launch {
+            val text = try {
+                context.contentResolver.openInputStream(uri)
+                    ?.bufferedReader()
+                    ?.use { it.readText() }
+            } catch (e: Exception) {
+                android.util.Log.e("HOME_DEBUG", "Failed to read CSV", e)
+                null
+            }
+
+            if (text.isNullOrBlank()) {
+                isImporting = false
+                Toast.makeText(context, "Couldn't read that file", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+
+            val result = ContactImporter.parse(text)
+
+            var imported = 0
+            var duplicates = 0
+            for (contact in result.contacts) {
+                val added = try {
+                    repo.addContact(contact)
+                } catch (e: Exception) {
+                    android.util.Log.e("HOME_DEBUG", "Failed to import a contact", e)
+                    false
+                }
+                if (added) imported++ else duplicates++
+            }
+
+            val skipped = duplicates + result.skippedRows
+            isImporting = false
+            Toast.makeText(
+                context,
+                if (imported == 0 && skipped == 0)
+                    "No contacts found in that file"
+                else
+                    "Imported $imported contact${if (imported == 1) "" else "s"}" +
+                        if (skipped > 0) " ($skipped skipped)" else "",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     init {

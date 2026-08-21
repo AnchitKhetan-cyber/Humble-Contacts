@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Email
@@ -79,6 +81,21 @@ fun ProfileScreen(
         ?: ""
 
     val context = LocalContext.current
+
+    // CSV import: pick a document and hand it to the ViewModel to parse + insert.
+    val importCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) viewModel.importContacts(context, uri)
+    }
+    val csvMimeTypes = arrayOf(
+        "text/csv",
+        "text/comma-separated-values",
+        "text/plain",
+        "application/csv",
+        "application/vnd.ms-excel",
+        "application/octet-stream"
+    )
 
     val initials = displayName
         .split(" ")
@@ -281,6 +298,17 @@ fun ProfileScreen(
                         subtitle = "Download all contacts as CSV",
                         onClick = {
                             viewModel.exportContacts(context)
+                        }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsRow(
+                        icon = Icons.Outlined.Upload,
+                        iconBg = MaterialTheme.colorScheme.secondaryContainer,
+                        iconTint = MaterialTheme.colorScheme.secondary,
+                        title = "Import Data",
+                        subtitle = "Add contacts from a CSV file",
+                        onClick = {
+                            importCsvLauncher.launch(csvMimeTypes)
                         }
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
