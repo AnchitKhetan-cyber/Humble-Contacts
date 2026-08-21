@@ -364,12 +364,16 @@ class AuthRepository {
                     "createdAt" to Timestamp.now(),
                     "updatedAt" to Timestamp.now(),
 
+                    // Opt-out default: new users share everything and turn off
+                    // what they want private (#20). Marked initialised so the
+                    // migration in getCurrentUserProfile() skips them.
                     "shareSettings" to hashMapOf(
-                        "sharePhone" to false,
-                        "shareEmail" to false,
-                        "shareCompany" to false,
-                        "shareLinkedIn" to false
+                        "sharePhone" to true,
+                        "shareEmail" to true,
+                        "shareCompany" to true,
+                        "shareLinkedIn" to true
                     ),
+                    "shareSettingsInitialized" to true,
 
                     "stats" to hashMapOf(
                         "totalContacts" to 0,

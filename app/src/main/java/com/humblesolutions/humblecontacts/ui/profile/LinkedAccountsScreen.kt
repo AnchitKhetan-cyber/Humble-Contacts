@@ -132,7 +132,11 @@ fun LinkedAccountsScreen(
 
         if (profile != null) {
 
-            if (profile.phone.isNotBlank()) {
+            // Honour the per-field share settings (#20): omit fields the user
+            // has switched off from the shareable QR list.
+            val share = profile.shareSettings
+
+            if (share.sharePhone && profile.phone.isNotBlank()) {
                 val fullPhoneNumber = "${profile.countryCode}${profile.phone}"
 
                 accounts.add(
@@ -144,13 +148,13 @@ fun LinkedAccountsScreen(
                 )
             }
 
-            if (profile.email.isNotBlank()) {
+            if (share.shareEmail && profile.email.isNotBlank()) {
                 accounts.add(
                     LinkedAccount("Email", profile.email)
                 )
             }
 
-            if (profile.linkedInUrl.isNotBlank()) {
+            if (share.shareLinkedIn && profile.linkedInUrl.isNotBlank()) {
                 accounts.add(
                     LinkedAccount("LinkedIn", profile.linkedInUrl)
                 )

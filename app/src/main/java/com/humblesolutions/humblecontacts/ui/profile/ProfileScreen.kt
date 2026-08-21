@@ -38,6 +38,7 @@ import com.google.firebase.auth.FirebaseAuth
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.humblesolutions.humblecontacts.data.model.UserProfile
+import com.humblesolutions.humblecontacts.data.model.ShareSettings
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
 import kotlinx.coroutines.launch
 import com.humblesolutions.humblecontacts.ui.home.HomeViewModel
@@ -98,6 +99,25 @@ fun ProfileScreen(
 
     val loadScope = rememberCoroutineScope()
 
+    // Rebuilds the shareable QR list from a profile, honouring the per-field
+    // share settings (#20) — fields switched off are omitted. Reused by the
+    // resume-load and by the privacy toggles so the list updates immediately.
+    val rebuildQrAccounts: (UserProfile?) -> Unit = { profile ->
+        qrAccounts.clear()
+        if (profile != null) {
+            val share = profile.shareSettings
+            if (share.sharePhone && profile.phone.isNotBlank()) {
+                val full = "${profile.countryCode}${profile.phone}"
+                qrAccounts.add(LinkedAccount("Phone", full))
+                qrAccounts.add(LinkedAccount("WhatsApp", full))
+            }
+            if (share.shareEmail && profile.email.isNotBlank())
+                qrAccounts.add(LinkedAccount("Email", profile.email))
+            if (share.shareLinkedIn && profile.linkedInUrl.isNotBlank())
+                qrAccounts.add(LinkedAccount("LinkedIn", profile.linkedInUrl))
+        }
+    }
+
     // Reload on every resume so edits made on the Edit Profile screen are reflected
     // when the user navigates back here.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -105,18 +125,7 @@ fun ProfileScreen(
             val repo    = ProfileRepository()
             val profile = repo.getCurrentUserProfile()
             userProfile = profile
-            qrAccounts.clear()
-            if (profile != null) {
-                if (profile.phone.isNotBlank()) {
-                    val full = "${profile.countryCode}${profile.phone}"
-                    qrAccounts.add(LinkedAccount("Phone", full))
-                    qrAccounts.add(LinkedAccount("WhatsApp", full))
-                }
-                if (profile.email.isNotBlank())
-                    qrAccounts.add(LinkedAccount("Email", profile.email))
-                if (profile.linkedInUrl.isNotBlank())
-                    qrAccounts.add(LinkedAccount("LinkedIn", profile.linkedInUrl))
-            }
+            rebuildQrAccounts(profile)
         }
     }
 
@@ -284,6 +293,52 @@ fun ProfileScreen(
                         titleColor = MaterialTheme.colorScheme.error,
                         onClick    = onNavigateToDeleteAccount
                     )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // ── Per-field sharing (privacy) toggles (#20) ────────────────
+                SettingsSection(title = "SHARING") {
+                    val share = userProfile?.shareSettings ?: ShareSettings()
+
+                    // Persist a changed ShareSettings and refresh the QR list live.
+                    val applyShare: (ShareSettings) -> Unit = { updated ->
+                        val newProfile = userProfile?.copy(shareSettings = updated)
+                        userProfile = newProfile
+                        rebuildQrAccounts(newProfile)
+                        loadScope.launch { ProfileRepository().updateShareSettings(updated) }
+                    }
+
+                    SettingsToggleRow(
+                        icon            = Icons.Outlined.Phone,
+                        iconBg          = MaterialTheme.colorScheme.primaryContainer,
+                        iconTint        = MaterialTheme.colorScheme.primary,
+                        title           = "Share phone number",
+                        subtitle        = "Include your phone in shared cards",
+                        checked         = share.sharePhone,
+                        onCheckedChange = { applyShare(share.copy(sharePhone = it)) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsToggleRow(
+                        icon            = Icons.Outlined.Email,
+                        iconBg          = MaterialTheme.colorScheme.primaryContainer,
+                        iconTint        = MaterialTheme.colorScheme.primary,
+                        title           = "Share email",
+                        subtitle        = "Include your email in shared cards",
+                        checked         = share.shareEmail,
+                        onCheckedChange = { applyShare(share.copy(shareEmail = it)) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsToggleRow(
+                        icon            = Icons.Outlined.Link,
+                        iconBg          = MaterialTheme.colorScheme.primaryContainer,
+                        iconTint        = MaterialTheme.colorScheme.primary,
+                        title           = "Share LinkedIn",
+                        subtitle        = "Include your LinkedIn in shared cards",
+                        checked         = share.shareLinkedIn,
+                        onCheckedChange = { applyShare(share.copy(shareLinkedIn = it)) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                 }
 
                 Spacer(Modifier.height(16.dp))

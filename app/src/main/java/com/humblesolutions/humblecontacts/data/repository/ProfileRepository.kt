@@ -4,6 +4,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
+import com.humblesolutions.humblecontacts.data.model.ShareSettings
 import com.humblesolutions.humblecontacts.data.model.UserProfile
 import kotlinx.coroutines.tasks.await
 
@@ -23,7 +24,39 @@ class ProfileRepository {
             .get()
             .await()
 
-        return snapshot.toObject(UserProfile::class.java)
+        val profile = snapshot.toObject(UserProfile::class.java) ?: return null
+
+        // One-time migration (#20): profiles created before the privacy toggles
+        // stored every share flag as false. Since those were never user-editable,
+        // flip them to the opt-out defaults (share on) so existing cards keep
+        // sharing, and mark the profile initialised so this runs only once.
+        if (!profile.shareSettingsInitialized) {
+            val migrated = ShareSettings()
+            usersCollection.document(uid).update(
+                mapOf(
+                    "shareSettings" to migrated,
+                    "shareSettingsInitialized" to true
+                )
+            ).await()
+            return profile.copy(
+                shareSettings = migrated,
+                shareSettingsInitialized = true
+            )
+        }
+
+        return profile
+    }
+
+    /** Persists the user's per-field share (privacy) settings (#20). */
+    suspend fun updateShareSettings(shareSettings: ShareSettings) {
+        val uid = auth.currentUser?.uid ?: return
+        usersCollection.document(uid).update(
+            mapOf(
+                "shareSettings" to shareSettings,
+                "shareSettingsInitialized" to true,
+                "updatedAt" to Timestamp.now()
+            )
+        ).await()
     }
 
     suspend fun saveProfile(
@@ -83,6 +116,12 @@ class ProfileRepository {
             shareSettings =
                 existingProfile?.shareSettings
                     ?: UserProfile().shareSettings,
+
+            // Carry the migration marker so this full .set() doesn't reset it to
+            // false and re-trigger the migration (which would wipe the user's
+            // per-field share choices). New profiles start initialised (#20).
+            shareSettingsInitialized =
+                existingProfile?.shareSettingsInitialized ?: true,
 
             stats =
                 existingProfile?.stats
@@ -149,6 +188,12 @@ class ProfileRepository {
             shareSettings =
                 existingProfile?.shareSettings
                     ?: UserProfile().shareSettings,
+
+            // Carry the migration marker so this full .set() doesn't reset it to
+            // false and re-trigger the migration (which would wipe the user's
+            // per-field share choices). New profiles start initialised (#20).
+            shareSettingsInitialized =
+                existingProfile?.shareSettingsInitialized ?: true,
 
             stats =
                 existingProfile?.stats
