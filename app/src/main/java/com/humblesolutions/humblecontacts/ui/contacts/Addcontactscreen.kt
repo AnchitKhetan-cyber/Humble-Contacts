@@ -51,6 +51,7 @@ import com.humblesolutions.humblecontacts.ui.auth.CountryCodeDropdown
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.humblesolutions.humblecontacts.ui.auth.countryCodes
+import com.humblesolutions.humblecontacts.data.repository.AddContactResult
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
 import com.humblesolutions.humblecontacts.utils.NetworkUtils
@@ -115,6 +116,10 @@ fun AddContactScreen(
     }
 
     var showReplaceDialog by rememberSaveable { mutableStateOf(false) }
+    // The field/value that triggered the duplicate dialog, so it can name what
+    // actually matched (email or phone) rather than "name" (#27).
+    var duplicateField by rememberSaveable { mutableStateOf("") }
+    var duplicateValue by rememberSaveable { mutableStateOf("") }
 
     val FocusManager = LocalFocusManager.current
 
@@ -788,22 +793,34 @@ fun AddContactScreen(
                         imageUri = imageUris.firstOrNull(),
                         tags = tags,
                         industry = industry.trim()
-                    ) { added ->
+                    ) { result ->
 
                         isSaving = false
 
-                        if (added) {
-
-                            Toast.makeText(
-                                context,
-                                "Contact saved",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                            showSaveToPhoneDialog = true
-
-                        } else {
-                            showReplaceDialog = true
+                        when (result) {
+                            is AddContactResult.Success -> {
+                                Toast.makeText(
+                                    context,
+                                    "Contact saved",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                showSaveToPhoneDialog = true
+                            }
+                            is AddContactResult.Duplicate -> {
+                                // Name the field that actually matched (#27).
+                                duplicateField = result.field
+                                duplicateValue = result.value
+                                showReplaceDialog = true
+                            }
+                            is AddContactResult.Error -> {
+                                // A real failure — never the duplicate dialog. The
+                                // form stays filled so the user can retry.
+                                Toast.makeText(
+                                    context,
+                                    "Couldn't save contact. Please check your connection and try again.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                         }
                     }
                 },
@@ -896,7 +913,16 @@ fun AddContactScreen(
             },
             title = { Text("Contact Already Exists") },
             text = {
-                Text("A contact with this name already exists. Would you like to replace it with the new details?")
+                val fieldLabel = when (duplicateField) {
+                    "email" -> "email address"
+                    "phone" -> "phone number"
+                    else -> duplicateField.ifBlank { "detail" }
+                }
+                val valueSuffix = if (duplicateValue.isNotBlank()) " ($duplicateValue)" else ""
+                Text(
+                    "A contact with this $fieldLabel$valueSuffix already exists. " +
+                        "Would you like to replace it with the new details?"
+                )
             },
             confirmButton = {
                 TextButton(

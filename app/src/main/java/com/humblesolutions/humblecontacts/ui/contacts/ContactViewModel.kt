@@ -14,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import com.humblesolutions.humblecontacts.data.model.Contact
 import com.humblesolutions.humblecontacts.data.model.ContactNote
 import com.humblesolutions.humblecontacts.data.repository.ContactRepository
+import com.humblesolutions.humblecontacts.data.repository.AddContactResult
 import com.humblesolutions.humblecontacts.notifications.NotificationHelper
 import com.humblesolutions.humblecontacts.utils.ContactExporter
 import com.google.firebase.firestore.ListenerRegistration
@@ -148,7 +149,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         imageUri: Uri?,
         tags: List<String> = emptyList(),
         industry: String = "",
-        onResult: (Boolean) -> Unit
+        onResult: (AddContactResult) -> Unit
     ) {
         viewModelScope.launch {
             val contact = Contact(
@@ -169,9 +170,9 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
                 entryMethod = "business_card"
             )
 
-            val added = repo.addContact(contact)
+            val result = repo.addContact(contact)
 
-            if (added) {
+            if (result is AddContactResult.Success) {
                 NotificationHelper.notifyAction(
                     getApplication(),
                     "Contact Added!",
@@ -179,7 +180,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
 
-            onResult(added)
+            onResult(result)
         }
     }
 
