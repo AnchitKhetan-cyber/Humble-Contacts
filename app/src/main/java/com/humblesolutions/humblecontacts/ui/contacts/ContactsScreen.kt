@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,6 +58,25 @@ fun ContactsScreen(
             viewModel.filtered(searchQuery, selectedFilter, selectedFilterValue)
                 .sortedByDescending { it.favourite }
         )
+    }
+
+    // Cursor pagination (ticket #25): as the list nears its end, ask the
+    // ViewModel to load the next page (it grows the single listener's limit).
+    val listState = rememberLazyListState()
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val total = listState.layoutInfo.totalItemsCount
+            total > 0 && lastVisible >= total - 5
+        }
+    }
+    LaunchedEffect(shouldLoadMore) {
+        // Only auto-page the full list. When a search/filter is active the view is
+        // page-scoped by design (#25 decision), so we don't keep loading pages to
+        // chase matches — that's what the P2-6 search backend is for.
+        if (shouldLoadMore && selectedFilter == "All" && searchQuery.isBlank()) {
+            viewModel.loadMore()
+        }
     }
 
     Scaffold(
@@ -302,6 +322,7 @@ fun ContactsScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -312,6 +333,18 @@ fun ContactsScreen(
                             onClick   = { onNavigateToContact(contact.contactId) },
                             onFavouriteClick = { viewModel.toggleFavourite(contact) }
                         )
+                    }
+                    if (viewModel.isLoadingMore) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                            }
+                        }
                     }
                     item { Spacer(Modifier.height(80.dp)) }
                 }

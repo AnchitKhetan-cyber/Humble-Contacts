@@ -23,18 +23,30 @@ class  ContactRepository {
     private val storageRef = storage.reference
 
     /**
-     * Registers a realtime listener for the current user's contacts and returns the
-     * [ListenerRegistration] so the caller can detach it. Callers **must** hold the
-     * returned registration and call [ListenerRegistration.remove] before
-     * re-registering (and when their scope is cleared); discarding it leaks the
-     * listener, stacking duplicate callbacks and billable Firestore reads (ticket #9).
+     * Registers a realtime listener for the current user's contacts, newest first,
+     * capped at [limit] documents. Sorting is done server-side via `orderBy`, and
+     * paging is done by re-registering with a larger [limit] as the user scrolls
+     * (ticket #25) — so large lists never load entirely into memory.
+     *
+     * Returns the [ListenerRegistration] so the caller can detach it. Callers
+     * **must** hold the returned registration and call [ListenerRegistration.remove]
+     * before re-registering (and when their scope is cleared); discarding it leaks
+     * the listener, stacking duplicate callbacks and billable reads (ticket #9).
+     *
+     * NOTE: the `ownerId` equality + `createdAt` order requires the composite index
+     * in `firestore.indexes.json`; the query errors until that index is deployed.
      */
-    fun getContactsRealtime(onResult: (List<Contact>) -> Unit): ListenerRegistration {
+    fun getContactsRealtime(
+        limit: Long,
+        onResult: (List<Contact>) -> Unit
+    ): ListenerRegistration {
 
-        Log.d("CONTACT_DEBUG", "Current UID = $uid")
+        Log.d("CONTACT_DEBUG", "Current UID = $uid, limit = $limit")
 
         return db.collection("contacts")
             .whereEqualTo("ownerId", uid)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(limit)
             .addSnapshotListener { snapshot, error ->
 
                 if (error != null) {
@@ -45,6 +57,7 @@ class  ContactRepository {
                     return@addSnapshotListener
                 }
 
+                // Already ordered server-side; keep Firestore's order.
                 val contacts = snapshot?.documents
                     ?.mapNotNull { doc ->
                         try {
@@ -54,7 +67,6 @@ class  ContactRepository {
                             null
                         }
                     }
-                    ?.sortedByDescending { it.createdAt?.seconds ?: 0L }
                     ?: emptyList()
 
                 Log.d(
