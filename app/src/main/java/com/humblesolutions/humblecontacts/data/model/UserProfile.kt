@@ -25,6 +25,10 @@ data class UserProfile(
     // App settings
     val authProviders: List<String> = emptyList(),
     val shareSettings: ShareSettings = ShareSettings(),
+    // One-time migration marker (#20): false on legacy profiles whose share flags
+    // predate the privacy toggles (all stored false). getCurrentUserProfile()
+    // flips those to the opt-out defaults once and sets this true.
+    val shareSettingsInitialized: Boolean = false,
     val stats: UserStats = UserStats(),
     val visitingCard: VisitingCard = VisitingCard(),
 
