@@ -33,6 +33,20 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
     var isParsingCard by mutableStateOf(false)
         private set
 
+    // Cursor pagination (ticket #25): a single realtime listener over the newest
+    // [currentLimit] contacts. Scrolling near the end grows the limit and
+    // re-registers the listener, so large lists never load entirely into memory.
+    var isLoadingMore by mutableStateOf(false)
+        private set
+
+    // Whether the last page came back full (so more may exist). Once a snapshot
+    // returns fewer than the limit, we've reached the end.
+    var hasMore by mutableStateOf(true)
+        private set
+
+    private val pageSize = 50L
+    private var currentLimit = pageSize
+
     // Holds the single active Firestore listener. Detached before re-registering
     // and in onCleared() so listeners never stack (ticket #9).
     private var contactsListener: ListenerRegistration? = null
@@ -45,10 +59,25 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         // Detach any existing listener before attaching a new one, so exactly one
         // is ever active regardless of how many times this is called.
         contactsListener?.remove()
-        contactsListener = repo.getContactsRealtime { result ->
+        contactsListener = repo.getContactsRealtime(currentLimit) { result ->
             contacts = result
+            // A full page means there may be more to load; a short page is the end.
+            hasMore = result.size.toLong() >= currentLimit
             isLoading = false
+            isLoadingMore = false
         }
+    }
+
+    /**
+     * Loads the next page by growing the listener's limit and re-registering it
+     * (keeping exactly one listener, per #9). No-op while a load is in flight or
+     * once the end has been reached.
+     */
+    fun loadMore() {
+        if (isLoadingMore || !hasMore) return
+        isLoadingMore = true
+        currentLimit += pageSize
+        registerContactsListener()
     }
 
     fun toggleFavourite(contact: Contact) {
@@ -70,6 +99,9 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
 
     fun refreshContacts() {
         isLoading = true
+        // Reset to the first page on an explicit refresh.
+        currentLimit = pageSize
+        hasMore = true
         registerContactsListener()
     }
 
