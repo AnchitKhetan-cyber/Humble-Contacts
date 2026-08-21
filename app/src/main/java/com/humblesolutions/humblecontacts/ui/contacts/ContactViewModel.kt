@@ -151,6 +151,48 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Updates an existing contact from the edit form. Starts from [original] so
+     * everything the form does not edit — contactId, ownerId, createdAt,
+     * favourite, media, businessCardImage, meetingDate/location, eventName — is
+     * preserved. A non-blank [newNote] is appended to the existing conversation
+     * notes rather than replacing them.
+     */
+    fun updateContact(
+        original: Contact,
+        fullName: String,
+        jobRole: String,
+        company: String,
+        industry: String,
+        email: String,
+        phone: String,
+        linkedIn: String,
+        address: String,
+        newNote: String,
+        tags: List<String>,
+        onDone: () -> Unit
+    ) {
+        viewModelScope.launch {
+            val updated = original.copy(
+                fullName = fullName,
+                jobRole = jobRole,
+                company = company,
+                industry = industry,
+                email = email,
+                phone = phone,
+                linkedIn = linkedIn,
+                address = address,
+                tags = tags,
+                conversationNotes =
+                    if (newNote.isBlank()) original.conversationNotes
+                    else original.conversationNotes +
+                        ContactNote(text = newNote.trim(), createdAt = Timestamp.now())
+            )
+            repo.updateContact(updated)
+            onDone()
+        }
+    }
+
     fun filtered(
         searchQuery: String,
         selectedFilter: String

@@ -11,6 +11,8 @@ object Routes {
     const val CONTACTS       = "contacts"
     const val CONTACT_DETAIL = "contact/{contactId}"
     const val ADD_CONTACT    = "add_contact"
+    // Edit an existing contact by reusing the Add Contact form in edit mode.
+    const val EDIT_CONTACT   = "edit_contact/{contactId}"
     // Registration pattern for the add-contact screen with an optional vCard to
     // prefill from. Plain `add_contact` navigation still matches this (vcard = null).
     const val ADD_CONTACT_WITH_ARGS = "add_contact?vcard={vcard}"

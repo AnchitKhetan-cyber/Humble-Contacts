@@ -62,6 +62,7 @@ fun ContactDetailScreen(
     onNavigateToScan:     () -> Unit = {},
     onNavigateToNfc:      () -> Unit = {},
     onNavigateToProfile:  () -> Unit = {},
+    onNavigateToEdit:     (String) -> Unit = {},
     contactViewModel:     ContactViewModel = viewModel()
 ) {
     // ── Load the real contact from Firestore ──────────────────────────────────
@@ -267,6 +268,21 @@ fun ContactDetailScreen(
                         .align(Alignment.TopEnd),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    // Edit — opens the Add form in edit mode, pre-filled with this contact.
+                    IconButton(onClick = { onNavigateToEdit(c.contactId) }) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f)
+                        ) {
+                            Icon(
+                                Icons.Outlined.Edit,
+                                contentDescription = "Edit Contact",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
+                    }
+
                     // Delete
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Surface(

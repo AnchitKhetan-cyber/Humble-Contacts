@@ -55,6 +55,7 @@ import com.humblesolutions.humblecontacts.ui.auth.PhoneInputScreen
 import com.humblesolutions.humblecontacts.ui.auth.RegisterScreen
 import com.humblesolutions.humblecontacts.ui.contacts.AddContactScreen
 import com.humblesolutions.humblecontacts.ui.contacts.ContactDetailScreen
+import com.humblesolutions.humblecontacts.ui.contacts.EditContactScreen
 import com.humblesolutions.humblecontacts.ui.contacts.ContactViewModel
 import com.humblesolutions.humblecontacts.ui.contacts.ContactsScreen
 import com.humblesolutions.humblecontacts.ui.home.HomeScreen
@@ -486,7 +487,21 @@ fun AppNavGraph(
                 } },
                 onNavigateToContacts = { navController.popBackStack() },
                 onNavigateToScan = { navController.navigate(Routes.SCAN) },
-                onNavigateToProfile = { navController.navigate(Routes.PROFILE) }
+                onNavigateToProfile = { navController.navigate(Routes.PROFILE) },
+                onNavigateToEdit = { id -> navController.navigate("edit_contact/$id") }
+            )
+        }
+
+        // ── Edit Contact ────────────────────────────────────────────────────
+        // Dedicated edit screen, pre-filled with the contact.
+        appComposable(
+            route = Routes.EDIT_CONTACT,
+            arguments = listOf(navArgument("contactId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            EditContactScreen(
+                contactId = backStackEntry.arguments?.getString("contactId") ?: "",
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
             )
         }
 
