@@ -13,6 +13,17 @@ import kotlinx.coroutines.tasks.await
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 
+/**
+ * Outcome of [ContactRepository.addContact] (ticket #27) — lets the UI tell a
+ * duplicate apart from a genuine write failure, and name the field that matched.
+ */
+sealed interface AddContactResult {
+    data class Success(val contactId: String) : AddContactResult
+    /** A contact already matches on [field] ("email" or "phone") with [value]. */
+    data class Duplicate(val field: String, val value: String, val existingId: String) : AddContactResult
+    data class Error(val cause: Throwable) : AddContactResult
+}
+
 class  ContactRepository {
     private val db = Firebase.firestore
     private val auth = Firebase.auth
@@ -78,67 +89,83 @@ class  ContactRepository {
             }
     }
 
-    suspend fun addContact(contact: Contact): Boolean {
-
-        val existingEmail =
+    /**
+     * Adds a contact, distinguishing the three outcomes the UI must tell apart
+     * (ticket #27): [AddContactResult.Success], [AddContactResult.Duplicate]
+     * (naming the field that actually matched — email or phone, never "name"),
+     * and [AddContactResult.Error] for a write/network failure — so a failure is
+     * never mistaken for a duplicate and the save is never silently dropped.
+     */
+    suspend fun addContact(contact: Contact): AddContactResult {
+        return try {
             if (contact.email.isNotBlank()) {
-                db.collection("contacts")
+                val existingEmail = db.collection("contacts")
                     .whereEqualTo("ownerId", uid)
                     .whereEqualTo("email", contact.email)
                     .get()
                     .await()
-            } else null
 
-        if (existingEmail != null && !existingEmail.isEmpty) {
-            return false
-        }
+                if (!existingEmail.isEmpty) {
+                    return AddContactResult.Duplicate(
+                        field = "email",
+                        value = contact.email,
+                        existingId = existingEmail.documents.first().id
+                    )
+                }
+            }
 
-        // Only match on phone when an actual number was entered. An empty field
-        // can be stored as a bare dial code (e.g. "+91 "), which is non-blank but
-        // carries no digits — matching on it would flag every phoneless contact
-        // as a duplicate of the first. Require at least one digit.
-        val existingPhone =
+            // Only match on phone when an actual number was entered. An empty field
+            // can be stored as a bare dial code (e.g. "+91 "), which is non-blank but
+            // carries no digits — matching on it would flag every phoneless contact
+            // as a duplicate of the first. Require at least one digit.
             if (contact.phone.any { it.isDigit() }) {
-                db.collection("contacts")
+                val existingPhone = db.collection("contacts")
                     .whereEqualTo("ownerId", uid)
                     .whereEqualTo("phone", contact.phone)
                     .get()
                     .await()
-            } else null
 
-        if (existingPhone != null && !existingPhone.isEmpty) {
-            return false
-        }
+                if (!existingPhone.isEmpty) {
+                    return AddContactResult.Duplicate(
+                        field = "phone",
+                        value = contact.phone,
+                        existingId = existingPhone.documents.first().id
+                    )
+                }
+            }
 
-        val ref = db.collection("contacts").document()
+            val ref = db.collection("contacts").document()
 
-        val contactWithId = contact.copy(
-            contactId = ref.id,
-            ownerId = uid,
-            createdAt = Timestamp.now(),
-            updatedAt = Timestamp.now()
-        )
-
-        var finalContact = contactWithId
-
-        if (contact.businessCardImage.isNotBlank()) {
-
-            val imageUrl = uploadBusinessCard(
+            val contactWithId = contact.copy(
+                contactId = ref.id,
                 ownerId = uid,
-                contactId = contactWithId.contactId,
-                imageUri = Uri.parse(contact.businessCardImage)
+                createdAt = Timestamp.now(),
+                updatedAt = Timestamp.now()
             )
 
-            finalContact = contactWithId.copy(
-                businessCardImage = imageUrl
-            )
+            var finalContact = contactWithId
+
+            if (contact.businessCardImage.isNotBlank()) {
+                val imageUrl = uploadBusinessCard(
+                    ownerId = uid,
+                    contactId = contactWithId.contactId,
+                    imageUri = Uri.parse(contact.businessCardImage)
+                )
+
+                finalContact = contactWithId.copy(
+                    businessCardImage = imageUrl
+                )
+            }
+
+            ref.set(finalContact).await()
+
+            AddContactResult.Success(ref.id)
+        } catch (e: Exception) {
+            // Network / Firestore failure — surfaced as a real error so it's never
+            // mistaken for a duplicate and the user can retry.
+            Log.e("CONTACT_DEBUG", "addContact failed", e)
+            AddContactResult.Error(e)
         }
-
-        ref.set(
-            finalContact
-        ).await()
-
-        return true
     }
 
     suspend fun deleteContact(contactId: String) {
@@ -272,7 +299,7 @@ class  ContactRepository {
         // No duplicate actually present — fall back to a normal fresh insert.
         val existingId = byEmail?.documents?.firstOrNull()?.id
             ?: byPhone?.documents?.firstOrNull()?.id
-            ?: return addContact(contact)
+            ?: return addContact(contact) is AddContactResult.Success
 
         val ref = db.collection("contacts").document(existingId)
 

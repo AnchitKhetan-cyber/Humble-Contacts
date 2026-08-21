@@ -14,6 +14,7 @@ import com.google.firebase.firestore.firestore
 import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.humblesolutions.humblecontacts.data.model.Contact
+import com.humblesolutions.humblecontacts.data.repository.AddContactResult
 import com.humblesolutions.humblecontacts.data.repository.ContactRepository
 import com.humblesolutions.humblecontacts.utils.ContactExporter
 import com.humblesolutions.humblecontacts.utils.ContactImporter
@@ -110,13 +111,12 @@ class HomeViewModel : ViewModel() {
             var imported = 0
             var duplicates = 0
             for (contact in result.contacts) {
-                val added = try {
-                    repo.addContact(contact)
-                } catch (e: Exception) {
-                    android.util.Log.e("HOME_DEBUG", "Failed to import a contact", e)
-                    false
+                // addContact now returns a sealed result (#27): count a Success as
+                // imported and anything else (duplicate or error) as skipped.
+                when (repo.addContact(contact)) {
+                    is AddContactResult.Success -> imported++
+                    else -> duplicates++
                 }
-                if (added) imported++ else duplicates++
             }
 
             val skipped = duplicates + result.skippedRows
