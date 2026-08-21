@@ -300,6 +300,16 @@ fun ProfileScreen(
                         onCheckedChange = onDarkModeChange
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsToggleRow(
+                        icon            = Icons.Outlined.Notifications,
+                        iconBg          = MaterialTheme.colorScheme.primaryContainer,
+                        iconTint        = MaterialTheme.colorScheme.primary,
+                        title           = "Notifications",
+                        subtitle        = "Get reminders and updates",
+                        checked         = notificationsEnabled,
+                        onCheckedChange = { settingsViewModel.setNotifications(it) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
                 }
 
                 Spacer(Modifier.height(16.dp))
