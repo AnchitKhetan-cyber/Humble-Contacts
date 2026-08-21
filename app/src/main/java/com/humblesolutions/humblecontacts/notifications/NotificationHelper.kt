@@ -15,7 +15,6 @@ import com.humblesolutions.humblecontacts.R
 
 object NotificationHelper {
 
-    const val CHANNEL_REMINDERS = "humble_reminders"
     const val CHANNEL_GENERAL   = "humble_general"
 
     fun createChannels(context: Context) {
@@ -34,19 +33,6 @@ object NotificationHelper {
 
         nm.createNotificationChannel(
             NotificationChannel(
-                CHANNEL_REMINDERS,
-                "Follow-up Reminders",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Reminders to follow up with your contacts"
-                setSound(soundUri, audioAttr)
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 250, 150, 250)
-            }
-        )
-
-        nm.createNotificationChannel(
-            NotificationChannel(
                 CHANNEL_GENERAL,
                 "General",
                 NotificationManager.IMPORTANCE_HIGH
@@ -57,34 +43,6 @@ object NotificationHelper {
                 vibrationPattern = longArrayOf(0, 250, 150, 250)
             }
         )
-    }
-
-    fun showReminderNotification(
-        context: Context,
-        id: Int,
-        contactName: String,
-        message: String
-    ) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val pi = PendingIntent.getActivity(
-            context, id, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Follow up with $contactName")
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setAutoCancel(true)
-            .setContentIntent(pi)
-            .build()
-
-        NotificationManagerCompat.from(context).notify(id, notification)
     }
 
     fun notifyAction(

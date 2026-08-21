@@ -36,20 +36,12 @@ class HumbleFirebaseMessagingService : FirebaseMessagingService() {
 
             val title = data["title"] ?: notification?.title ?: "HumbleContacts"
             val body  = data["body"]  ?: notification?.body  ?: ""
-            val type  = data["type"]  ?: "general"
 
             val notifId = System.currentTimeMillis().toInt()
 
-            if (type == "reminder") {
-                val contactName = data["contactName"] ?: title
-                NotificationHelper.showReminderNotification(
-                    applicationContext, notifId, contactName, body
-                )
-            } else {
-                NotificationHelper.showGeneralNotification(
-                    applicationContext, notifId, title, body
-                )
-            }
+            NotificationHelper.showGeneralNotification(
+                applicationContext, notifId, title, body
+            )
         }
     }
 }

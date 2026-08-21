@@ -377,8 +377,7 @@ class AuthRepository {
 
                     "stats" to hashMapOf(
                         "totalContacts" to 0,
-                        "totalEvents" to 0,
-                        "totalReminders" to 0
+                        "totalEvents" to 0
                     ),
 
                     "visitingCard" to hashMapOf(
