@@ -522,7 +522,25 @@ fun AppNavGraph(
             AddContactScreen(
                 vcard = backStackEntry.arguments?.getString("vcard"),
                 onBack = { navController.popBackStack() },
-                onSave = { navController.popBackStack() }
+                onSave = { navController.popBackStack() },
+                // Wire the bottom-nav callbacks so the bar works when this screen
+                // is reached from the Contacts + FAB (not just the Add tab).
+                onNavigateToHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME)
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToContacts = {
+                    navController.navigate(Routes.CONTACTS) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToProfile = {
+                    navController.navigate(Routes.PROFILE) {
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 
