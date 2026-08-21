@@ -617,6 +617,14 @@ fun AddContactScreen(
                     placeholder = "Company Name",
                     capitalization = KeyboardCapitalization.Words
                 )
+                Spacer(Modifier.height(12.dp))
+                ContactTextField(
+                    value = industry,
+                    onValueChange = { industry = it },
+                    label = "Industry",
+                    placeholder = "Industry",
+                    capitalization = KeyboardCapitalization.Words
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -778,7 +786,8 @@ fun AddContactScreen(
                         address = address.trim(),
                         notes = notes.trim(),
                         imageUri = imageUris.firstOrNull(),
-                        tags = tags
+                        tags = tags,
+                        industry = industry.trim()
                     ) { added ->
 
                         isSaving = false
@@ -908,7 +917,8 @@ fun AddContactScreen(
                             address = address.trim(),
                             notes = notes.trim(),
                             imageUri = imageUris.firstOrNull(),
-                            tags = tags
+                            tags = tags,
+                            industry = industry.trim()
                         ) {
                             isSaving = false
 

@@ -115,6 +115,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         notes: String,
         imageUri: Uri?,
         tags: List<String> = emptyList(),
+        industry: String = "",
         onResult: (Boolean) -> Unit
     ) {
         viewModelScope.launch {
@@ -122,6 +123,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
                 fullName = fullName,
                 jobRole = jobRole,
                 company = company,
+                industry = industry,
                 email = email,
                 phone = phone,
                 linkedIn = linkedIn,
@@ -180,6 +182,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         notes: String,
         imageUri: Uri?,
         tags: List<String> = emptyList(),
+        industry: String = "",
         onDone: () -> Unit
     ) {
         viewModelScope.launch {
@@ -187,6 +190,7 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
                 fullName = fullName,
                 jobRole = jobRole,
                 company = company,
+                industry = industry,
                 email = email,
                 phone = phone,
                 linkedIn = linkedIn,

@@ -284,6 +284,10 @@ class  ContactRepository {
                 fullName = contact.fullName,
                 jobRole = contact.jobRole,
                 company = contact.company,
+                // Overwrite industry only when the scan captured one, so a re-scan
+                // can fill a previously empty industry without wiping an existing
+                // value on a blank capture (#17).
+                industry = contact.industry.ifBlank { existing.industry },
                 email = contact.email,
                 phone = contact.phone,
                 linkedIn = contact.linkedIn,
@@ -299,7 +303,7 @@ class  ContactRepository {
                     .distinctBy { it.trim().lowercase() },
                 updatedAt = Timestamp.now()
                 // Preserved unchanged by copy(): contactId, ownerId, createdAt,
-                // favourite, media, industry, meetingLocation, eventName.
+                // favourite, media, meetingLocation, eventName.
             )
 
             transaction.set(ref, merged)
