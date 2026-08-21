@@ -15,9 +15,13 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.humblesolutions.humblecontacts.data.auth.PendingDeletionStore
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import com.humblesolutions.humblecontacts.navigation.AppNavGraph
 import com.humblesolutions.humblecontacts.navigation.Routes
 import com.humblesolutions.humblecontacts.notifications.NotificationHelper
+import com.humblesolutions.humblecontacts.ui.components.OfflineBanner
 import com.humblesolutions.humblecontacts.ui.theme.HumbleContactsTheme
 
 class MainActivity : ComponentActivity() {
@@ -98,15 +102,19 @@ class MainActivity : ComponentActivity() {
                     else -> Routes.SPLASH
                 }
 
-                AppNavGraph(
-                    startDestination = startDestination,
-                    darkMode = darkMode,
-                    onDarkModeChange = { turnedOn ->
-                        // Any manual toggle persists and overrides the device theme.
-                        darkMode = turnedOn
-                        themePreference.saveDarkMode(turnedOn)
-                    }
-                )
+                // App-wide offline indicator above the nav host (ticket #28).
+                Column(modifier = Modifier.fillMaxSize()) {
+                    OfflineBanner()
+                    AppNavGraph(
+                        startDestination = startDestination,
+                        darkMode = darkMode,
+                        onDarkModeChange = { turnedOn ->
+                            // Any manual toggle persists and overrides the device theme.
+                            darkMode = turnedOn
+                            themePreference.saveDarkMode(turnedOn)
+                        }
+                    )
+                }
             }
         }
     }
