@@ -231,24 +231,11 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         selectedFilter: String,
         selectedValue: String? = null
     ): List<Contact> {
-        val query = searchQuery.trim()
         return contacts.filter { contact ->
-            // Search across the fields people actually recall someone by — including
-            // conversation notes, where the most distinctive detail usually lives
-            // (ticket #29). Case-insensitive, partial, trimmed. NOTE: this is an
-            // in-memory scan over loaded contacts, so it's page-scoped once
-            // pagination (#25) is active; an indexed search backend is the planned
-            // follow-up (P2-6).
-            val matchesSearch =
-                query.isBlank() ||
-                    contact.fullName.contains(query, ignoreCase = true) ||
-                    contact.company.contains(query, ignoreCase = true) ||
-                    contact.jobRole.contains(query, ignoreCase = true) ||
-                    contact.email.contains(query, ignoreCase = true) ||
-                    contact.phone.contains(query, ignoreCase = true) ||
-                    contact.address.contains(query, ignoreCase = true) ||
-                    contact.eventName.contains(query, ignoreCase = true) ||
-                    contact.conversationNotes.any { it.text.contains(query, ignoreCase = true) }
+            // Search across the fields people actually recall someone by, incl.
+            // conversation notes (ticket #29). See [contactMatchesQuery] for the
+            // predicate and the pagination/indexed-search follow-up note.
+            val matchesSearch = contactMatchesQuery(contact, searchQuery)
 
             // "By …" chips filter to a value the user picked from that chip's
             // dropdown. With no value chosen yet the dimension matches nothing,
