@@ -40,6 +40,8 @@
     <string name="card_image_saved">Saved to gallery</string>
     <string name="card_image_save_error">Couldn\'t save the image.</string>
     <string name="card_qr_title">Scan to save contact</string>
+    <string name="card_qr_hint">Point a camera at this code to save my details.</string>
     <string name="card_qr_share">Share QR</string>
+    <string name="card_share_qr_button">Share via QR</string>
     <string name="card_close">Close</string>
 </resources>

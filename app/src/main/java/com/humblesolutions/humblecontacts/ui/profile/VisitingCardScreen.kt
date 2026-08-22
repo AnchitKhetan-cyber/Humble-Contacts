@@ -59,7 +59,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -78,11 +77,11 @@ import com.humblesolutions.humblecontacts.ui.auth.HumbleInputField
 import com.humblesolutions.humblecontacts.ui.profile.card.CardAccentSwatches
 import com.humblesolutions.humblecontacts.ui.profile.card.CardBackground
 import com.humblesolutions.humblecontacts.ui.profile.card.CardFontStyle
+import com.humblesolutions.humblecontacts.ui.profile.card.CardQrDialog
 import com.humblesolutions.humblecontacts.ui.profile.card.CardTemplate
 import com.humblesolutions.humblecontacts.ui.profile.card.VisitingCardView
 import com.humblesolutions.humblecontacts.ui.profile.card.parseHexColor
 import com.humblesolutions.humblecontacts.utils.CardShareUtils
-import com.humblesolutions.humblecontacts.utils.generateQrBitmap
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -565,43 +564,6 @@ private fun ShareAction(
             Text(label, fontSize = 11.sp, maxLines = 1)
         }
     }
-}
-
-@Composable
-private fun CardQrDialog(
-    content: String,
-    onShare: (android.graphics.Bitmap) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val qr = remember(content) { generateQrBitmap(content, sizePx = 640) }
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                stringResource(R.string.card_qr_title),
-                fontWeight = FontWeight.SemiBold
-            )
-        },
-        text = {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                androidx.compose.foundation.Image(
-                    bitmap = qr.asImageBitmap(),
-                    contentDescription = stringResource(R.string.card_qr_title),
-                    modifier = Modifier.size(240.dp)
-                )
-            }
-        },
-        confirmButton = {
-            androidx.compose.material3.TextButton(onClick = { onShare(qr) }) {
-                Text(stringResource(R.string.card_qr_share))
-            }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.card_close))
-            }
-        }
-    )
 }
 
 /** A filesystem-safe base name derived from the user's name. */
