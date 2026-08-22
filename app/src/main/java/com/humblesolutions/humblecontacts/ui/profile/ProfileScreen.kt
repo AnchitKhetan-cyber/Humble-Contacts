@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.humblesolutions.humblecontacts.data.model.UserProfile
 import com.humblesolutions.humblecontacts.data.model.ShareSettings
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
+import com.humblesolutions.humblecontacts.ui.profile.card.VisitingCardView
 import kotlinx.coroutines.launch
 import com.humblesolutions.humblecontacts.ui.home.HomeViewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
@@ -63,6 +64,7 @@ fun ProfileScreen(
     onNavigateToDeleteAccount: () -> Unit = {},
     onNavigateToEditProfile: () -> Unit = {},
     onNavigateToLinkedAccounts: () -> Unit = {},
+    onNavigateToVisitingCard: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
 
@@ -246,6 +248,28 @@ fun ProfileScreen(
                 }
             }
 
+            // ── Visiting card preview (#64) ───────────────────────────────────
+            userProfile?.let { profile ->
+                Spacer(Modifier.height(20.dp))
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Text(
+                        "MY VISITING CARD",
+                        fontSize      = 12.sp,
+                        fontWeight    = FontWeight.SemiBold,
+                        color         = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 0.8.sp
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    VisitingCardView(
+                        profile = profile,
+                        card = profile.visitingCard,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onNavigateToVisitingCard)
+                    )
+                }
+            }
+
             // ── QR icon cards ─────────────────────────────────────────────────
             if (qrAccounts.isNotEmpty()) {
                 Spacer(Modifier.height(20.dp))
@@ -284,6 +308,15 @@ fun ProfileScreen(
                         title = "Edit Profile",
                         subtitle = "Update your information",
                         onClick = onNavigateToEditProfile
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsRow(
+                        icon = Icons.Outlined.Badge,
+                        iconBg = MaterialTheme.colorScheme.secondaryContainer,
+                        iconTint = MaterialTheme.colorScheme.secondary,
+                        title = "My Visiting Card",
+                        subtitle = "Create and share your digital card",
+                        onClick = onNavigateToVisitingCard
                     )
                 }
 

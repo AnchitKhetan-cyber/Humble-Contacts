@@ -9,4 +9,37 @@
     <string name="qr_open_link_icon_desc">Warning: external link</string>
     <string name="qr_open_link_unknown_host">an unknown site</string>
     <string name="qr_unreadable">Couldn\'t read this QR code.</string>
+
+    <!-- Digital visiting card (ticket #64) -->
+    <string name="card_title">My Visiting Card</string>
+    <string name="card_back">Back</string>
+    <string name="card_retry">Retry</string>
+    <string name="card_your_name">Your name</string>
+    <string name="card_template">Template</string>
+    <string name="card_accent">Accent colour</string>
+    <string name="card_accent_selected">Selected accent colour</string>
+    <string name="card_background">Background</string>
+    <string name="card_bg_surface">Surface</string>
+    <string name="card_bg_solid">Solid</string>
+    <string name="card_bg_gradient">Gradient</string>
+    <string name="card_font">Font</string>
+    <string name="card_details">Details</string>
+    <string name="card_headline_hint">Headline — e.g. Building delightful apps</string>
+    <string name="card_bio_hint">A short line about you</string>
+    <string name="card_website_hint">Website (https://…)</string>
+    <string name="card_portfolio_hint">Portfolio (https://…)</string>
+    <string name="card_save">Save card</string>
+    <string name="card_saved">Card saved</string>
+    <string name="card_save_error">Couldn\'t save. Please try again.</string>
+    <string name="card_load_error">Couldn\'t load your card.</string>
+    <string name="card_share_section">Share your card</string>
+    <string name="card_share_image">Image</string>
+    <string name="card_save_image">Save image to gallery</string>
+    <string name="card_show_qr">QR code</string>
+    <string name="card_share_vcard">Contact</string>
+    <string name="card_image_saved">Saved to gallery</string>
+    <string name="card_image_save_error">Couldn\'t save the image.</string>
+    <string name="card_qr_title">Scan to save contact</string>
+    <string name="card_qr_share">Share QR</string>
+    <string name="card_close">Close</string>
 </resources>

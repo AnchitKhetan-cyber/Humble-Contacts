@@ -67,6 +67,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.humblesolutions.humblecontacts.ui.profile.CompleteProfileScreen
 import com.humblesolutions.humblecontacts.ui.profile.DeleteAccountScreen
 import com.humblesolutions.humblecontacts.ui.profile.LinkedAccountsScreen
+import com.humblesolutions.humblecontacts.ui.profile.VisitingCardScreen
 import org.json.JSONObject
 
 /**
@@ -594,7 +595,16 @@ fun AppNavGraph(
                 onNavigateToLinkedAccounts = {
                     navController.navigate(Routes.LINKED_ACCOUNTS)
                 },
+                onNavigateToVisitingCard = {
+                    navController.navigate(Routes.VISITING_CARD)
+                },
                 onLogout = navigateToLogin
+            )
+        }
+
+        appComposable(route = Routes.VISITING_CARD) {
+            VisitingCardScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 
