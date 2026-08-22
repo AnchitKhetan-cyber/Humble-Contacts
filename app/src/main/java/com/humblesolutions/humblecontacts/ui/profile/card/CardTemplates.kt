@@ -22,12 +22,24 @@ import com.humblesolutions.humblecontacts.ui.theme.Navy600
 enum class CardLayout {
     /** Avatar + identity on the left, contact rows below a divider. */
     STANDARD,
+    /** Dark, serif, name over a short accent rule; no avatar. */
+    EXECUTIVE,
+    /** A coloured header band (centred monogram + name) over a light body. */
+    HEADER_BAND,
+    /** A coloured left panel with a big monogram, details on the right. */
+    SPLIT_PANEL,
     /** Everything centre-aligned around a prominent avatar. */
     CENTERED,
-    /** A coloured header band (name/role in it) over a light body. */
-    HEADER_BAND,
-    /** A vertical accent stripe down the leading edge. */
-    SIDE_STRIPE
+    /** Centred, uppercase letter-spaced name framed by two hairline rules. */
+    FRAMED,
+    /** A dominant monogram badge on top, name and details beneath. */
+    MONOGRAM,
+    /** Oversized name typography; a minimal inline contact block. */
+    BOLD_TYPE,
+    /** A wide accent rail (monogram in it) down the leading edge. */
+    SIDE_RAIL,
+    /** Monospace, an accent corner tab, key-value contact rows. */
+    MONO_TECH
 }
 
 /** The preset templates. `id` is what's persisted in `VisitingCard.template`. */
@@ -40,15 +52,15 @@ enum class CardTemplate(
     val defaultFont: CardFontStyle
 ) {
     MINIMAL("minimal", "Minimal", CardLayout.STANDARD, "#3B5A9A", CardBackground.SURFACE, CardFontStyle.SANS),
-    EXECUTIVE("executive", "Executive", CardLayout.STANDARD, "#1A2D5A", CardBackground.SOLID, CardFontStyle.SERIF),
+    EXECUTIVE("executive", "Executive", CardLayout.EXECUTIVE, "#1A2D5A", CardBackground.SOLID, CardFontStyle.SERIF),
     CLASSIC("classic", "Classic", CardLayout.HEADER_BAND, "#1A2D5A", CardBackground.SURFACE, CardFontStyle.SERIF),
-    CORPORATE("corporate", "Corporate", CardLayout.HEADER_BAND, "#0F4C81", CardBackground.SURFACE, CardFontStyle.SANS),
+    CORPORATE("corporate", "Corporate", CardLayout.SPLIT_PANEL, "#0F4C81", CardBackground.SURFACE, CardFontStyle.SANS),
     GRADIENT("gradient", "Gradient", CardLayout.CENTERED, "#3B5A9A", CardBackground.GRADIENT, CardFontStyle.SANS),
-    ELEGANT("elegant", "Elegant", CardLayout.CENTERED, "#A87C0D", CardBackground.SURFACE, CardFontStyle.SERIF),
-    MONOGRAM("monogram", "Monogram", CardLayout.CENTERED, "#B00020", CardBackground.SURFACE, CardFontStyle.SANS),
-    BOLD("bold", "Bold", CardLayout.STANDARD, "#263238", CardBackground.SOLID, CardFontStyle.SANS),
-    SIDEBAR("sidebar", "Sidebar", CardLayout.SIDE_STRIPE, "#00695C", CardBackground.SURFACE, CardFontStyle.SANS),
-    MODERN("modern", "Modern", CardLayout.STANDARD, "#6A1B9A", CardBackground.SURFACE, CardFontStyle.MONO);
+    ELEGANT("elegant", "Elegant", CardLayout.FRAMED, "#A87C0D", CardBackground.SURFACE, CardFontStyle.SERIF),
+    MONOGRAM("monogram", "Monogram", CardLayout.MONOGRAM, "#B00020", CardBackground.SURFACE, CardFontStyle.SANS),
+    BOLD("bold", "Bold", CardLayout.BOLD_TYPE, "#263238", CardBackground.SOLID, CardFontStyle.SANS),
+    SIDEBAR("sidebar", "Sidebar", CardLayout.SIDE_RAIL, "#00695C", CardBackground.SURFACE, CardFontStyle.SANS),
+    MODERN("modern", "Modern", CardLayout.MONO_TECH, "#6A1B9A", CardBackground.SURFACE, CardFontStyle.MONO);
 
     companion object {
         val DEFAULT = MINIMAL

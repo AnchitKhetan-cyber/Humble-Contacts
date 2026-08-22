@@ -1,6 +1,12 @@
 package com.humblesolutions.humblecontacts.ui.profile
 
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -54,6 +60,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -160,19 +167,28 @@ fun VisitingCardScreen(
                     Spacer(Modifier.height(12.dp))
 
                     // ── Live preview (also the image-export source) ──────────
+                    // animateContentSize smooths height changes as fields/layouts
+                    // change; Crossfade fades between templates on switch.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .animateContentSize()
                             .drawWithContent {
                                 graphicsLayer.record { this@drawWithContent.drawContent() }
                                 drawLayer(graphicsLayer)
                             }
                     ) {
-                        VisitingCardView(
-                            profile = profile,
-                            card = state.card,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Crossfade(
+                            targetState = state.card.template.ifBlank { CardTemplate.DEFAULT.id },
+                            animationSpec = tween(280),
+                            label = "cardTemplate"
+                        ) { _ ->
+                            VisitingCardView(
+                                profile = profile,
+                                card = state.card,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
 
                     Spacer(Modifier.height(24.dp))
@@ -417,8 +433,15 @@ private fun TemplateThumbnail(
             fontStyle = ""
         )
     }
-    val borderColor = if (selected) MaterialTheme.colorScheme.primary
-    else MaterialTheme.colorScheme.outlineVariant
+    // Animated selection feedback.
+    val borderColor by animateColorAsState(
+        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+        label = "thumbBorder"
+    )
+    val borderW by animateDpAsState(if (selected) 2.dp else 1.dp, label = "thumbBorderW")
+    val scale by animateFloatAsState(
+        if (selected) 1f else 0.955f, animationSpec = tween(220), label = "thumbScale"
+    )
     Column(
         modifier = Modifier.width(168.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -426,9 +449,10 @@ private fun TemplateThumbnail(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .graphicsLayer { scaleX = scale; scaleY = scale }
                 .clip(RoundedCornerShape(18.dp))
                 .border(
-                    width = if (selected) 2.dp else 1.dp,
+                    width = borderW,
                     color = borderColor,
                     shape = RoundedCornerShape(18.dp)
                 )
