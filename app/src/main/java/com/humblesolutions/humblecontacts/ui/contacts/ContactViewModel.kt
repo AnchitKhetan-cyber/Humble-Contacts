@@ -232,11 +232,10 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         selectedValue: String? = null
     ): List<Contact> {
         return contacts.filter { contact ->
-            val matchesSearch =
-                searchQuery.isBlank() ||
-                    contact.fullName.contains(searchQuery, ignoreCase = true) ||
-                    contact.company.contains(searchQuery, ignoreCase = true) ||
-                    contact.jobRole.contains(searchQuery, ignoreCase = true)
+            // Search across the fields people actually recall someone by, incl.
+            // conversation notes (ticket #29). See [contactMatchesQuery] for the
+            // predicate and the pagination/indexed-search follow-up note.
+            val matchesSearch = contactMatchesQuery(contact, searchQuery)
 
             // "By …" chips filter to a value the user picked from that chip's
             // dropdown. With no value chosen yet the dimension matches nothing,
