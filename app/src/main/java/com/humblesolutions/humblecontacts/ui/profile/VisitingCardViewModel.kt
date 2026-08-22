@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.humblesolutions.humblecontacts.data.model.UserProfile
 import com.humblesolutions.humblecontacts.data.model.VisitingCard
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
-import com.humblesolutions.humblecontacts.utils.VCardBuilder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,13 +71,6 @@ class VisitingCardViewModel : ViewModel() {
                 _uiState.update { it.copy(isSaving = false, saveError = true) }
             }
         }
-    }
-
-    /** The vCard string for the current profile + saved fields (QR + `.vcf`). */
-    fun buildVCard(): String {
-        val profile = _uiState.value.profile ?: return ""
-        // Share the card exactly as edited (card extras) with the live profile fields.
-        return VCardBuilder.build(profile.copy(visitingCard = _uiState.value.card))
     }
 
     fun consumeSaveSuccess() = _uiState.update { it.copy(saveSuccess = false) }

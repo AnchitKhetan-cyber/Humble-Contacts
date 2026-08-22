@@ -1,6 +1,6 @@
 # Handoff — ticket #64
 
-**Ticket:** #64 — [P2][Feature] Digital visiting card — templates, customization, and sharing
+**Ticket:** #64 — [P2][Feature] Digital visiting card — templates & customization
 
 ## Summary
 Turns the previously-dormant `visitingCard` field into a full feature. A user opens a new
@@ -8,19 +8,14 @@ Turns the previously-dormant `visitingCard` field into a full feature. A user op
 distinct layout (Standard, Executive, Header-band, Split-panel, Centered, Framed, Monogram,
 Bold-type, Side-rail, Mono-tech) shown as a **live thumbnail** in the picker — tweaks the accent
 colour / background / font, fills in card-specific text (headline, bio, website, portfolio), and
-sees a live preview that **crossfades** on template change. The card **auto-fills** its display fields (name, company, role, phone,
-email, LinkedIn, address) live from `UserProfile`, so there is one source of truth and no
-duplicated data. It can be shared three ways — as an **image** (share sheet + save-to-gallery),
-as a **QR code** that encodes a **vCard**, and as a **`.vcf` file** — and all three honour the
-existing per-field `ShareSettings` privacy toggles. Because the QR encodes a vCard, scanning
-someone's card with the app's existing scanner drops you into a prefilled Add Contact form.
+sees a live preview that **crossfades** on template change. The card **auto-fills** its display
+fields (name, company, role, phone, email, LinkedIn, address) live from `UserProfile`, so there
+is one source of truth and no duplicated data. The saved card is shown on the Profile screen.
 
-**Scan → save contact + store card in Media (#64)**
-A shared card's QR now also carries the card *design* in `X-HC-*` vCard extension
-fields (invisible to standard scanners). When another HumbleContacts user scans it, the
-Add-Contact screen reconstructs the visiting card, shows it, and — on Save — stores that
-card image under the new contact's **Media** tab. The contact itself saves through the
-existing prefill flow.
+**No sharing.** Per the product owner, the card is create / customize / preview / save only —
+there is deliberately **no** image / QR / vCard export, and no scan-to-Media flow. (Earlier
+revisions built those; they were removed at the owner's request. The pre-existing vCard-QR
+*contact* scanner and the linked-accounts QR codes are unaffected — they are not card sharing.)
 
 ## Files changed
 
@@ -39,14 +34,6 @@ existing prefill flow.
   existing `updateShareSettings` pattern (`.update(mapOf(..., "updatedAt" to now))`); imports
   `VisitingCard`.
 
-**New utilities**
-- `utils/VCardBuilder.kt` — builds a vCard 3.0 string from `UserProfile` + `VisitingCard`,
-  gated by `ShareSettings`, RFC-escaped. Single source for both the `.vcf` and the QR.
-- `utils/QrUtils.kt` — `generateQrBitmap` extracted here (from `LinkedAccountsScreen`) so the
-  linked-accounts QR and the card QR share one implementation.
-- `utils/CardShareUtils.kt` — local share/export helpers: `shareCardImage` (PNG → cache →
-  `${applicationId}.provider` FileProvider → share sheet), `saveCardImageToGallery` (MediaStore
-  Pictures on API 29+, external-files fallback below), `shareVCard` (`.vcf` → share sheet).
 
 **Card rendering + templates**
 - `ui/profile/card/CardTemplates.kt` — `CardLayout` (**10 distinct layout archetypes**),
@@ -54,55 +41,30 @@ existing prefill flow.
   `CardBackground`, `CardFontStyle` enums with string↔type resolvers that always fall back to a
   default; `CardAccentSwatches` (10-swatch palette); `parseHexColor`;
   `VisitingCard.resolveStyle()`.
-- `ui/profile/card/VisitingCardView.kt` — the card composable used by both the preview and the
-  image export. Dispatches on the template's `CardLayout` to render ten visually distinct layouts
-  (Standard, Executive, Header-band, Split-panel, Centered, Framed, Monogram, Bold-type,
+- `ui/profile/card/VisitingCardView.kt` — the card composable used by the editor preview and the
+  Profile preview. Dispatches on the template's `CardLayout` to render ten visually distinct
+  layouts (Standard, Executive, Header-band, Split-panel, Centered, Framed, Monogram, Bold-type,
   Side-rail, Mono-tech) from shared privacy-gated building blocks (`gatedContacts`, `Monogram`,
   `ContactList`, palette/surfacing helpers). Supports a `compact` mode for the picker thumbnails.
   Reads display fields live from `UserProfile`; contact rows gated by `ShareSettings`.
 
 **Editor screen + ViewModel**
 - `ui/profile/VisitingCardViewModel.kt` — plain `ViewModel` (matches `ProfileViewModel`); loads
-  profile+card, holds edits, `save()`, and `buildVCard()`; exposes loading/saving/error/success
-  state.
-- `ui/profile/VisitingCardScreen.kt` — the editor: live preview (captured to a bitmap via
-  `GraphicsLayer`), template/accent/background/font pickers, text fields (reusing
-  `HumbleInputField` with URI keyboards + IME actions), Save, and the three share actions + a QR
-  dialog. Loading / load-error(+retry) / saving states.
+  profile+card, holds edits, `save()`; exposes loading/saving/error/success state.
+- `ui/profile/VisitingCardScreen.kt` — the editor: live preview (crossfades on template change),
+  a horizontally-scrolling row of live template thumbnails, accent/background/font pickers, text
+  fields (reusing `HumbleInputField` with URI keyboards + IME actions), and Save. Loading /
+  load-error(+retry) / saving states. **No share actions.**
 
 **Navigation + entry point**
 - `navigation/Screen.kt` — added `VISITING_CARD` route.
 - `navigation/AppNavGraph.kt` — registered `VisitingCardScreen`; passes `onNavigateToVisitingCard`
   into `ProfileScreen`.
 - `ui/profile/ProfileScreen.kt` — new **My Visiting Card** row in the ACCOUNT section + a live
-  card preview (tappable → editor) above the QR section; imports `VisitingCardView`.
-
-**Reuse cleanup**
-- `ui/profile/LinkedAccountsScreen.kt` — removed its local `generateQrBitmap` and the now-unused
-  ZXing/`Bitmap` imports; imports the shared `utils.generateQrBitmap` instead. Behaviour
-  unchanged.
-
-**Scan → Media**
-- `utils/VCardBuilder.kt` — appends `X-HC-CARD` (template|accent|bg|font) + `X-HC-HEADLINE`
-  / `X-HC-BIO` / `X-HC-WEBSITE` / `X-HC-PORTFOLIO` so a scan can rebuild the exact card.
-- `utils/HumbleCardParser.kt` — new; parses those fields back into a `VisitingCard` (or null
-  for a non-HumbleContacts scan).
-- `data/repository/ContactRepository.kt` — new `addMediaImage(contactId, uri)`: uploads to
-  `contacts/{id}/media/{uuid}.jpg` and `arrayUnion`s the URL into `media` (same location the
-  detail gallery uses). Best-effort.
-- `ui/contacts/ContactViewModel.kt` — `addContact` takes an optional `cardMediaUri`; on success
-  uploads it to the new contact's Media in the background.
-- `ui/contacts/Addcontactscreen.kt` — when the scanned vCard is a HumbleContacts card, shows a
-  reconstructed "Scanned Visiting Card" preview and, on Save, captures it (GraphicsLayer → cache
-  PNG) and passes it as `cardMediaUri`.
+  card preview (tappable → editor) with an **Edit card** button; imports `VisitingCardView`.
 
 **Strings**
-- `res/values/strings.xml` — all new user-facing card strings (no hardcoded UI text).
-
-**Tests**
-- `test/.../utils/VCardBuilderTest.kt` — 4 tests: vCard round-trips through `VCardParser`;
-  output is well-formed; `ShareSettings` gates phone/email/company/LinkedIn; special characters
-  are escaped and survive parsing.
+- `res/values/strings.xml` — new user-facing card strings (no hardcoded UI text).
 
 **Docs**
 - `docs/tickets/64-digital-visiting-card.md` — the ticket spec (added when the ticket was drafted).
@@ -113,26 +75,22 @@ existing prefill flow.
 ```
 ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest
 ```
-Green. `VCardBuilderTest` runs 4 tests, 0 failures.
+Green.
 
 **Manual (device/emulator, signed in):**
 1. Profile tab → **My Visiting Card** row (ACCOUNT). Editor opens with your profile data
    already showing on the preview.
-2. Tap through the 5 **templates**; change **accent** swatch, **background** (Surface/Solid/
-   Gradient), and **font** (Sans/Serif/Mono) → the preview updates live.
+2. Tap through the **10 template thumbnails** (each a live mini-card) → the big preview
+   crossfades. Change **accent** swatch, **background** (Surface/Solid/Gradient), and **font**
+   (Sans/Serif/Mono) → the preview updates live.
 3. Fill **Headline / Bio / Website / Portfolio** → they appear on the preview. Tap **Save card**
    → "Card saved" toast; reopen the editor → values persisted.
-4. Back on Profile → the top **MY VISITING CARD** preview reflects the saved card; tapping it
-   reopens the editor.
-5. **Share → Image** → Android share sheet with a PNG of the card. **Save image to gallery** →
-   "Saved to gallery" (check Pictures/Humble Contacts).
-6. **Share → QR code** → dialog; scan it with the app's own scanner (Scan tab) → Add Contact
-   opens prefilled. **Share QR** shares the QR image.
-7. **Share → Contact** → share sheet with a `.vcf`; open it on another device / import it →
-   fields match.
-8. **Privacy:** Profile → SHARING, turn off Share phone/email/LinkedIn → return to the card;
-   those rows disappear from the preview and are absent from the image, QR, and `.vcf`.
-9. Verify in **light and dark**; on a **Solid/Gradient** background the text stays legible.
+4. Back on Profile → the **MY VISITING CARD** preview reflects the saved card; tapping it (or the
+   **Edit card** button) reopens the editor.
+5. Confirm there is **no** share/QR/export control anywhere on the card or Profile.
+6. **Privacy:** Profile → SHARING, turn off Share phone/email/LinkedIn → return to the card;
+   those rows disappear from the preview.
+7. Verify in **light and dark**; on a **Solid/Gradient** background the text stays legible.
 
 ## Acceptance criteria
 - [x] **My Visiting Card** row in Profile ACCOUNT opens the editor; live preview on Profile.
@@ -143,11 +101,8 @@ Green. `VCardBuilderTest` runs 4 tests, 0 failures.
 - [x] Stored under `users/{uid}.visitingCard` via `updateVisitingCard`; reopening shows saved state.
 - [x] Model, `AuthRepository` seed, and editor agree on one shape; legacy `cardTheme` handled via
       `@PropertyName` + all-defaulted fields (no crash on old profiles).
-- [x] Share as image via share sheet + save-to-gallery.
-- [x] Share as QR encoding a vCard; scanning opens Add Contact prefilled (reuses existing scanner).
-- [x] Share as `.vcf` via share sheet; round-trips through `VCardParser` (unit-tested).
-- [x] All three share paths honour `ShareSettings` (gating in `VCardBuilder` unit-tested; card
-      rendering gates the same fields).
+- [x] **No card sharing** — no image / QR / vCard export, no scan-to-Media (removed per owner).
+- [x] Contact rows honour `ShareSettings` in the card rendering.
 - [x] No new secrets, Cloud Functions, or Firestore-rules changes.
 - [x] UI standards: light+dark theme tokens, reused components (`HumbleInputField`, settings
       rows), URI keyboards + IME actions, loading/saving/error states, content descriptions,
@@ -158,28 +113,21 @@ Green. `VCardBuilderTest` runs 4 tests, 0 failures.
 - **`template` keyed as `cardTheme`.** Rather than renaming the Firestore field (which would
   strand old data), `template` maps to the existing `cardTheme` key via `@PropertyName`. This was
   the ticket's sanctioned option and needs zero migration.
-- **QR dialog is card-specific, not the shared `QrCodeDialog`.** The existing `QrCodeDialog` is
-  typed to `LinkedAccount` and shows per-field content; the card QR shows a single vCard, so a
-  small `CardQrDialog` was added instead (the QR *generation* is shared via `QrUtils`). Flagged
-  as acceptable during planning.
-- **Image capture uses the on-screen preview via `GraphicsLayer`.** Simpler and guarantees WYSIWYG
-  vs. an off-screen re-render. Note: it captures the last drawn frame of the preview (see
-  follow-ups).
-- **Legacy-deserialization AC is covered structurally, not by a unit test.** Firestore mapping
-  can't be exercised in plain JUnit without Robolectric/instrumentation; it's guaranteed by the
-  `@PropertyName` mapping + all-defaulted fields. The other two test ACs (round-trip, gating) are
-  unit-tested.
-- **Headline + bio ride in the vCard `NOTE`** (no dedicated vCard field for them); the parser
-  doesn't read NOTE, so they don't affect the round-trip assertions.
+- **No sharing (owner decision).** The ticket originally scoped image/QR/vCard export and a
+  scan-to-Media flow, all of which were built and then **removed at the product owner's request**
+  ("no sharing of the visiting card"). Deleted with them: `CardShareUtils`, `VCardBuilder`,
+  `HumbleCardParser`, `CardQrDialog`, `VCardBuilderTest`, and `ContactRepository.addMediaImage`.
+  Untouched: the pre-existing vCard-QR *contact* scanner (`AddContactScreen` prefill) and the
+  linked-accounts QR codes (`LinkedAccountsScreen` / `QrUtils.generateQrBitmap`) — neither is
+  card sharing.
+- **Legacy deserialization is covered structurally, not by a unit test.** Firestore mapping can't
+  be exercised in plain JUnit without Robolectric/instrumentation; it's guaranteed by the
+  `@PropertyName` mapping + all-defaulted fields.
 - **`splash_icon_transparent.xml`** and the two root `*.pdf` files were already untracked on the
   branch before this work and are intentionally left out of the ticket's changes.
 
 ## Open questions / follow-ups
-- **Image capture when scrolled off-screen:** the share buttons sit below the preview in one
-  scroll view; if the preview is scrolled out when the user taps Share/Save, the captured bitmap
-  is the last drawn frame (still reflects current data). If reviewers want it bulletproof, render
-  the card to an off-screen `GraphicsLayer` on demand instead. Low risk in practice.
-- **No Compose UI tests** for the editor (pre-existing gap for the app's UI). The logic-heavy part
-  (`VCardBuilder`) is unit-tested; UI is manual for now.
-- **Storage of a card image** was deliberately out of scope (sharing is local). If a hosted/
-  shareable card page is wanted later, that's a separate ticket (would also change the QR to a URL).
+- **No Compose UI tests** for the editor (pre-existing gap for the app's UI); verification is
+  manual.
+- The ticket title still says "and sharing"; the delivered scope is templates + customization
+  only, per the owner's later decision to drop sharing.

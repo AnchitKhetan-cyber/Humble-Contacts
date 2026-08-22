@@ -43,9 +43,6 @@ import com.humblesolutions.humblecontacts.data.model.UserProfile
 import com.humblesolutions.humblecontacts.data.model.ShareSettings
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
 import com.humblesolutions.humblecontacts.ui.profile.card.VisitingCardView
-import com.humblesolutions.humblecontacts.ui.profile.card.CardQrDialog
-import com.humblesolutions.humblecontacts.utils.VCardBuilder
-import com.humblesolutions.humblecontacts.utils.CardShareUtils
 import kotlinx.coroutines.launch
 import com.humblesolutions.humblecontacts.ui.home.HomeViewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
@@ -116,7 +113,6 @@ fun ProfileScreen(
     val profileViewModel: ProfileViewModel = viewModel()
 
     var showLogoutDialog  by remember { mutableStateOf(false) }
-    var showCardQr        by remember { mutableStateOf(false) }
     var selectedQrAccount by remember { mutableStateOf<LinkedAccount?>(null) }
     val qrAccounts = remember { mutableStateListOf<LinkedAccount>() }
 
@@ -272,25 +268,14 @@ fun ProfileScreen(
                             .clickable(onClick = onNavigateToVisitingCard)
                     )
                     Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(
-                            onClick = { showCardQr = true },
-                            modifier = Modifier.weight(1f).height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Outlined.QrCode2, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Share via QR", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        }
-                        OutlinedButton(
-                            onClick = onNavigateToVisitingCard,
-                            modifier = Modifier.weight(1f).height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Edit card", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        }
+                    OutlinedButton(
+                        onClick = onNavigateToVisitingCard,
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Edit card", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -564,17 +549,6 @@ fun ProfileScreen(
 
     selectedQrAccount?.let { account ->
         QrCodeDialog(account = account, onDismiss = { selectedQrAccount = null })
-    }
-
-    // Visiting-card QR (#64): encodes the vCard so scanning imports the contact.
-    if (showCardQr) {
-        userProfile?.let { profile ->
-            CardQrDialog(
-                content = VCardBuilder.build(profile),
-                onShare = { qr -> CardShareUtils.shareCardImage(context, qr, "humble_card_qr") },
-                onDismiss = { showCardQr = false }
-            )
-        }
     }
 }
 

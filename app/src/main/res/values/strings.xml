@@ -32,16 +32,4 @@
     <string name="card_saved">Card saved</string>
     <string name="card_save_error">Couldn\'t save. Please try again.</string>
     <string name="card_load_error">Couldn\'t load your card.</string>
-    <string name="card_share_section">Share your card</string>
-    <string name="card_share_image">Image</string>
-    <string name="card_save_image">Save image to gallery</string>
-    <string name="card_show_qr">QR code</string>
-    <string name="card_share_vcard">Contact</string>
-    <string name="card_image_saved">Saved to gallery</string>
-    <string name="card_image_save_error">Couldn\'t save the image.</string>
-    <string name="card_qr_title">Scan to save contact</string>
-    <string name="card_qr_hint">Point a camera at this code to save my details.</string>
-    <string name="card_qr_share">Share QR</string>
-    <string name="card_share_qr_button">Share via QR</string>
-    <string name="card_close">Close</string>
 </resources>

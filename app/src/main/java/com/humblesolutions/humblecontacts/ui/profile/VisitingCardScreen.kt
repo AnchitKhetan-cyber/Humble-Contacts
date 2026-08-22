@@ -29,11 +29,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material.icons.outlined.Save
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,20 +46,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.ui.graphics.rememberGraphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -77,12 +66,9 @@ import com.humblesolutions.humblecontacts.ui.auth.HumbleInputField
 import com.humblesolutions.humblecontacts.ui.profile.card.CardAccentSwatches
 import com.humblesolutions.humblecontacts.ui.profile.card.CardBackground
 import com.humblesolutions.humblecontacts.ui.profile.card.CardFontStyle
-import com.humblesolutions.humblecontacts.ui.profile.card.CardQrDialog
 import com.humblesolutions.humblecontacts.ui.profile.card.CardTemplate
 import com.humblesolutions.humblecontacts.ui.profile.card.VisitingCardView
 import com.humblesolutions.humblecontacts.ui.profile.card.parseHexColor
-import com.humblesolutions.humblecontacts.utils.CardShareUtils
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,13 +78,8 @@ fun VisitingCardScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
-    // Captures the on-screen card preview into a bitmap for image sharing.
-    val graphicsLayer = rememberGraphicsLayer()
-    var showQr by remember { mutableStateOf(false) }
-
-    // One-shot feedback for save / image results.
+    // One-shot feedback for save results.
     LaunchedEffect(state.saveSuccess) {
         if (state.saveSuccess) {
             Toast.makeText(context, context.getString(R.string.card_saved), Toast.LENGTH_SHORT).show()
@@ -165,17 +146,13 @@ fun VisitingCardScreen(
                 ) {
                     Spacer(Modifier.height(12.dp))
 
-                    // ── Live preview (also the image-export source) ──────────
+                    // ── Live preview ─────────────────────────────────────────
                     // animateContentSize smooths height changes as fields/layouts
                     // change; Crossfade fades between templates on switch.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateContentSize()
-                            .drawWithContent {
-                                graphicsLayer.record { this@drawWithContent.drawContent() }
-                                drawLayer(graphicsLayer)
-                            }
                     ) {
                         Crossfade(
                             targetState = state.card.template.ifBlank { CardTemplate.DEFAULT.id },
@@ -329,78 +306,10 @@ fun VisitingCardScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(24.dp))
-
-                    // ── Share ────────────────────────────────────────────────
-                    SectionLabel(stringResource(R.string.card_share_section))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ShareAction(
-                            icon = Icons.Outlined.Image,
-                            label = stringResource(R.string.card_share_image),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            scope.launch {
-                                try {
-                                    val bmp = graphicsLayer.toImageBitmap().asAndroidBitmap()
-                                    CardShareUtils.shareCardImage(context, bmp, cardFileName(profile.name))
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, context.getString(R.string.card_image_save_error), Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        }
-                        ShareAction(
-                            icon = Icons.Outlined.QrCode2,
-                            label = stringResource(R.string.card_show_qr),
-                            modifier = Modifier.weight(1f)
-                        ) { showQr = true }
-                        ShareAction(
-                            icon = Icons.Outlined.Share,
-                            label = stringResource(R.string.card_share_vcard),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            CardShareUtils.shareVCard(context, viewModel.buildVCard(), cardFileName(profile.name))
-                        }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                try {
-                                    val bmp = graphicsLayer.toImageBitmap().asAndroidBitmap()
-                                    val ok = CardShareUtils.saveCardImageToGallery(context, bmp, cardFileName(profile.name))
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(if (ok) R.string.card_image_saved else R.string.card_image_save_error),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, context.getString(R.string.card_image_save_error), Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text(stringResource(R.string.card_save_image))
-                    }
-
                     Spacer(Modifier.height(32.dp))
                 }
             }
         }
-    }
-
-    if (showQr) {
-        CardQrDialog(
-            content = viewModel.buildVCard(),
-            onShare = { qrBmp ->
-                CardShareUtils.shareCardImage(
-                    context, qrBmp, "humble_card_qr"
-                )
-            },
-            onDismiss = { showQr = false }
-        )
     }
 }
 
@@ -543,34 +452,4 @@ private fun AccentSwatch(hex: String, selected: Boolean, onClick: () -> Unit) {
             )
         }
     }
-}
-
-@Composable
-private fun ShareAction(
-    icon: ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.height(64.dp),
-        shape = RoundedCornerShape(14.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.height(4.dp))
-            Text(label, fontSize = 11.sp, maxLines = 1)
-        }
-    }
-}
-
-/** A filesystem-safe base name derived from the user's name. */
-private fun cardFileName(name: String): String {
-    val slug = name.trim().lowercase()
-        .replace(Regex("[^a-z0-9]+"), "_")
-        .trim('_')
-        .ifBlank { "card" }
-    return "humble_card_$slug"
 }

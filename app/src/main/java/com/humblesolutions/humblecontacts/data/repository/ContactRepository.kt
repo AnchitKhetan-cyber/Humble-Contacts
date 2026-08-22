@@ -378,32 +378,4 @@ class  ContactRepository {
 
         return downloadUrl
     }
-
-    /**
-     * Uploads one image into a contact's Media (#64) — the same
-     * `contacts/{id}/media/{uuid}.jpg` location + `media` array the contact
-     * detail's gallery uses — and appends its URL to the doc's `media` list.
-     * Used to store a visiting card reconstructed from a scanned QR.
-     * Returns the download URL, or null on failure (best-effort — never fails
-     * the contact save it follows).
-     */
-    suspend fun addMediaImage(contactId: String, imageUri: Uri): String? {
-        return try {
-            val fileName = "${java.util.UUID.randomUUID()}.jpg"
-            val ref = storageRef
-                .child("contacts")
-                .child(contactId)
-                .child("media")
-                .child(fileName)
-            ref.putFile(imageUri).await()
-            val url = ref.downloadUrl.await().toString()
-            db.collection("contacts").document(contactId)
-                .update("media", com.google.firebase.firestore.FieldValue.arrayUnion(url))
-                .await()
-            url
-        } catch (e: Exception) {
-            Log.e("CONTACT_DEBUG", "addMediaImage failed for $contactId", e)
-            null
-        }
-    }
 }

@@ -149,9 +149,6 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
         imageUri: Uri?,
         tags: List<String> = emptyList(),
         industry: String = "",
-        // A visiting card reconstructed from a scanned QR (#64) — stored in the
-        // new contact's Media once it's created.
-        cardMediaUri: Uri? = null,
         onResult: (AddContactResult) -> Unit
     ) {
         viewModelScope.launch {
@@ -181,13 +178,6 @@ class ContactViewModel(application: Application) : AndroidViewModel(application)
                     "Contact Added!",
                     "$fullName has been added to your contacts."
                 )
-
-                // Store the scanned visiting card in the new contact's Media
-                // (#64). Best-effort and in the background so it never blocks the
-                // save; the ViewModel scope outlives the screen.
-                if (cardMediaUri != null) {
-                    launch { repo.addMediaImage(result.contactId, cardMediaUri) }
-                }
             }
 
             onResult(result)
