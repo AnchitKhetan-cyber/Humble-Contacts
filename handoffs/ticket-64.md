@@ -15,6 +15,13 @@ as a **QR code** that encodes a **vCard**, and as a **`.vcf` file** — and all 
 existing per-field `ShareSettings` privacy toggles. Because the QR encodes a vCard, scanning
 someone's card with the app's existing scanner drops you into a prefilled Add Contact form.
 
+**Scan → save contact + store card in Media (#64)**
+A shared card's QR now also carries the card *design* in `X-HC-*` vCard extension
+fields (invisible to standard scanners). When another HumbleContacts user scans it, the
+Add-Contact screen reconstructs the visiting card, shows it, and — on Save — stores that
+card image under the new contact's **Media** tab. The contact itself saves through the
+existing prefill flow.
+
 ## Files changed
 
 **Data model + reconciliation**
@@ -74,6 +81,20 @@ someone's card with the app's existing scanner drops you into a prefilled Add Co
 - `ui/profile/LinkedAccountsScreen.kt` — removed its local `generateQrBitmap` and the now-unused
   ZXing/`Bitmap` imports; imports the shared `utils.generateQrBitmap` instead. Behaviour
   unchanged.
+
+**Scan → Media**
+- `utils/VCardBuilder.kt` — appends `X-HC-CARD` (template|accent|bg|font) + `X-HC-HEADLINE`
+  / `X-HC-BIO` / `X-HC-WEBSITE` / `X-HC-PORTFOLIO` so a scan can rebuild the exact card.
+- `utils/HumbleCardParser.kt` — new; parses those fields back into a `VisitingCard` (or null
+  for a non-HumbleContacts scan).
+- `data/repository/ContactRepository.kt` — new `addMediaImage(contactId, uri)`: uploads to
+  `contacts/{id}/media/{uuid}.jpg` and `arrayUnion`s the URL into `media` (same location the
+  detail gallery uses). Best-effort.
+- `ui/contacts/ContactViewModel.kt` — `addContact` takes an optional `cardMediaUri`; on success
+  uploads it to the new contact's Media in the background.
+- `ui/contacts/Addcontactscreen.kt` — when the scanned vCard is a HumbleContacts card, shows a
+  reconstructed "Scanned Visiting Card" preview and, on Save, captures it (GraphicsLayer → cache
+  PNG) and passes it as `cardMediaUri`.
 
 **Strings**
 - `res/values/strings.xml` — all new user-facing card strings (no hardcoded UI text).

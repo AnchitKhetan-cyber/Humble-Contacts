@@ -55,8 +55,35 @@ import com.humblesolutions.humblecontacts.data.repository.AddContactResult
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
 import com.humblesolutions.humblecontacts.utils.NetworkUtils
+import android.content.Context
+import android.graphics.Bitmap
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import com.humblesolutions.humblecontacts.data.model.UserProfile
+import com.humblesolutions.humblecontacts.data.model.VisitingCard
+import com.humblesolutions.humblecontacts.ui.profile.card.VisitingCardView
+import com.humblesolutions.humblecontacts.utils.HumbleCardParser
+import java.io.File
+import java.io.FileOutputStream
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
+
+/**
+ * Renders the reconstructed visiting card ([layer] captured from the on-screen
+ * preview) to a PNG in the cache and returns a file [Uri], for upload into the
+ * new contact's Media (#64). Best-effort — returns null on any failure.
+ */
+private suspend fun captureScannedCard(context: Context, layer: GraphicsLayer): Uri? = try {
+    val bmp = layer.toImageBitmap().asAndroidBitmap()
+    val file = File(context.cacheDir, "scanned_card_${System.currentTimeMillis()}.png")
+    FileOutputStream(file).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    Uri.fromFile(file)
+} catch (e: Exception) {
+    null
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -184,6 +211,25 @@ fun AddContactScreen(
     }
 
     val context = LocalContext.current
+
+    // Visiting card reconstructed from a scanned HumbleContacts QR (#64), or null
+    // for an OCR/plain-vCard scan. When present we show it at the top and, on
+    // save, capture it to store under the new contact's Media.
+    val scannedCard = remember(vcard) {
+        if (vcard != null) HumbleCardParser.parse(vcard) else null
+    }
+    val cardGraphicsLayer = rememberGraphicsLayer()
+    val scannedProfile = UserProfile(
+        name = fullName,
+        profession = jobRole,
+        company = company,
+        phone = phone,
+        countryCode = if (phone.isBlank()) "" else "${selectedCountry.dialCode} ",
+        email = email,
+        linkedInUrl = if (linkedIn.isBlank()) "" else "https://www.linkedin.com/in/${linkedIn.trim()}",
+        address = address,
+        visitingCard = scannedCard ?: VisitingCard()
+    )
 
 
     // URI the camera writes the full-resolution capture into. Held across the
@@ -338,6 +384,34 @@ fun AddContactScreen(
         ) {
 
             Spacer(Modifier.height(16.dp))
+
+            // ── Scanned visiting card (#64) ──────────────────────────────────
+            // Reconstructed from the QR; captured on save into the contact's Media.
+            if (scannedCard != null) {
+                SectionCard(title = "Scanned Visiting Card") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .drawWithContent {
+                                cardGraphicsLayer.record { this@drawWithContent.drawContent() }
+                                drawLayer(cardGraphicsLayer)
+                            }
+                    ) {
+                        VisitingCardView(
+                            profile = scannedProfile,
+                            card = scannedProfile.visitingCard,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "This card will be saved to the contact's Media.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+            }
 
             // ── Business Card Section ────────────────────────────────────────
             SectionCard(title = "Business Card") {
@@ -781,6 +855,12 @@ fun AddContactScreen(
 
                     isSaving = true
 
+                    scope.launch {
+                    // Capture the reconstructed card (if this was a HumbleContacts
+                    // scan) so it can be stored under the contact's Media.
+                    val cardMediaUri =
+                        if (scannedCard != null) captureScannedCard(context, cardGraphicsLayer) else null
+
                     viewModel.addContact(
                         fullName = fullName.trim(),
                         jobRole = jobRole.trim(),
@@ -792,7 +872,8 @@ fun AddContactScreen(
                         notes = notes.trim(),
                         imageUri = imageUris.firstOrNull(),
                         tags = tags,
-                        industry = industry.trim()
+                        industry = industry.trim(),
+                        cardMediaUri = cardMediaUri
                     ) { result ->
 
                         isSaving = false
@@ -822,6 +903,7 @@ fun AddContactScreen(
                                 ).show()
                             }
                         }
+                    }
                     }
                 },
                 modifier = Modifier

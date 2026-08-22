@@ -78,6 +78,20 @@ object VCardBuilder {
             sb.append("NOTE:").append(escape(note)).append("\r\n")
         }
 
+        // HumbleContacts extension fields (#64) — invisible to standard vCard
+        // parsers (X- prefix) but let another HumbleContacts app faithfully
+        // rebuild the *visual* card when it scans this code, to store under the
+        // contact's Media. See HumbleCardParser.
+        sb.append("X-HC-CARD:")
+            .append(card.template).append('|')
+            .append(card.accentColor).append('|')
+            .append(card.background).append('|')
+            .append(card.fontStyle).append("\r\n")
+        if (card.headline.isNotBlank()) sb.append("X-HC-HEADLINE:").append(escape(card.headline.trim())).append("\r\n")
+        if (card.bio.isNotBlank()) sb.append("X-HC-BIO:").append(escape(card.bio.trim())).append("\r\n")
+        if (card.websiteUrl.isNotBlank()) sb.append("X-HC-WEBSITE:").append(escape(card.websiteUrl.trim())).append("\r\n")
+        if (card.portfolioUrl.isNotBlank()) sb.append("X-HC-PORTFOLIO:").append(escape(card.portfolioUrl.trim())).append("\r\n")
+
         sb.append("END:VCARD\r\n")
         return sb.toString()
     }

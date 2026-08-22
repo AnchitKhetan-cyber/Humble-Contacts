@@ -80,6 +80,40 @@ class VCardBuilderTest {
     }
 
     @Test
+    fun `embedded HumbleContacts card round-trips through HumbleCardParser`() {
+        val profile = sampleProfile().copy(
+            visitingCard = VisitingCard(
+                template = "executive",
+                accentColor = "#1A2D5A",
+                background = "solid",
+                fontStyle = "serif",
+                headline = "Building delightful apps",
+                bio = "I love clean architecture.",
+                websiteUrl = "https://alice.dev",
+                portfolioUrl = "https://alice.dev/work"
+            )
+        )
+        val vcard = VCardBuilder.build(profile)
+        val card = HumbleCardParser.parse(vcard)
+
+        assertTrue("should detect a HumbleContacts card", card != null)
+        assertEquals("executive", card!!.template)
+        assertEquals("#1A2D5A", card.accentColor)
+        assertEquals("solid", card.background)
+        assertEquals("serif", card.fontStyle)
+        assertEquals("Building delightful apps", card.headline)
+        assertEquals("I love clean architecture.", card.bio)
+        assertEquals("https://alice.dev", card.websiteUrl)
+        assertEquals("https://alice.dev/work", card.portfolioUrl)
+    }
+
+    @Test
+    fun `a plain vCard is not detected as a HumbleContacts card`() {
+        val plain = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Bob Jones\r\nEND:VCARD\r\n"
+        assertTrue(HumbleCardParser.parse(plain) == null)
+    }
+
+    @Test
     fun `special characters are escaped and survive parsing`() {
         // Comma and semicolon are vCard value delimiters; the builder must escape
         // them so they come back intact. (Tested on the name, which the parser
