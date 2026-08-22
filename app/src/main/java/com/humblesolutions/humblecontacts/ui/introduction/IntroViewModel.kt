@@ -1,4 +1,4 @@
-package com.humblesolutions.humblecontacts.ui.intro
+package com.humblesolutions.humblecontacts.ui.introduction
 
 // ─────────────────────────────────────────────────────────────────────────────
 // IntroViewModel.kt — Humble Contacts

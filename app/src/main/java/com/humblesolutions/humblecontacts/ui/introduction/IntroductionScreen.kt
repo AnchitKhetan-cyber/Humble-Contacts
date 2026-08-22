@@ -32,9 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.humblesolutions.humblecontacts.ui.intro.IntroEvent
-import com.humblesolutions.humblecontacts.ui.intro.IntroViewModel
-import com.humblesolutions.humblecontacts.ui.intro.introPages
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.cos
