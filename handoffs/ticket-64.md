@@ -4,9 +4,10 @@
 
 ## Summary
 Turns the previously-dormant `visitingCard` field into a full feature. A user opens a new
-**My Visiting Card** editor from their Profile, picks one of five templates, tweaks the accent
-colour / background / font, fills in card-specific text (headline, bio, website, portfolio), and
-sees a live preview. The card **auto-fills** its display fields (name, company, role, phone,
+**My Visiting Card** editor from their Profile, picks one of **ten** templates (four distinct
+layout families — Standard, Centered, Header-band, Side-stripe), tweaks the accent colour /
+background / font, fills in card-specific text (headline, bio, website, portfolio), and sees a
+live preview. The card **auto-fills** its display fields (name, company, role, phone,
 email, LinkedIn, address) live from `UserProfile`, so there is one source of truth and no
 duplicated data. It can be shared three ways — as an **image** (share sheet + save-to-gallery),
 as a **QR code** that encodes a **vCard**, and as a **`.vcf` file** — and all three honour the
@@ -40,12 +41,14 @@ someone's card with the app's existing scanner drops you into a prefilled Add Co
   Pictures on API 29+, external-files fallback below), `shareVCard` (`.vcf` → share sheet).
 
 **Card rendering + templates**
-- `ui/profile/card/CardTemplates.kt` — `CardTemplate` (5 presets), `CardBackground`,
+- `ui/profile/card/CardTemplates.kt` — `CardLayout` (4 layout families), `CardTemplate`
+  (**10 presets**, each bound to a layout + default accent/background/font), `CardBackground`,
   `CardFontStyle` enums with string↔type resolvers that always fall back to a default;
-  `CardAccentSwatches` palette; `parseHexColor`; `VisitingCard.resolveStyle()`.
+  `CardAccentSwatches` (10-swatch palette); `parseHexColor`; `VisitingCard.resolveStyle()`.
 - `ui/profile/card/VisitingCardView.kt` — the card composable used by both the preview and the
-  image export. Reads display fields live from `UserProfile`; contact rows are gated by
-  `ShareSettings` so toggled-off fields don't render.
+  image export. Dispatches on the template's `CardLayout` to render Standard / Centered /
+  Header-band / Side-stripe layouts from shared building blocks. Reads display fields live from
+  `UserProfile`; contact rows are gated by `ShareSettings` so toggled-off fields don't render.
 
 **Editor screen + ViewModel**
 - `ui/profile/VisitingCardViewModel.kt` — plain `ViewModel` (matches `ProfileViewModel`); loads
@@ -108,7 +111,8 @@ Green. `VCardBuilderTest` runs 4 tests, 0 failures.
 
 ## Acceptance criteria
 - [x] **My Visiting Card** row in Profile ACCOUNT opens the editor; live preview on Profile.
-- [x] Editor offers 5 templates + accent/background/font changes; preview updates live.
+- [x] Editor offers 10 templates (4 layout families) + accent/background/font changes; preview
+      updates live.
 - [x] Card auto-fills name/company/role/phone/email/LinkedIn/address from `UserProfile`; editor
       only edits headline/bio/website/portfolio + look (no duplicated stored copy).
 - [x] Stored under `users/{uid}.visitingCard` via `updateVisitingCard`; reopening shows saved state.

@@ -13,19 +13,42 @@ import com.humblesolutions.humblecontacts.ui.theme.Navy600
  * so an unknown/blank/legacy value never breaks rendering.
  */
 
+/**
+ * The structural layout a template draws with. This is the template's intrinsic
+ * identity (unlike accent/background/font, which the user can freely tweak), so
+ * the ten presets read as genuinely different professional cards rather than the
+ * same card recoloured.
+ */
+enum class CardLayout {
+    /** Avatar + identity on the left, contact rows below a divider. */
+    STANDARD,
+    /** Everything centre-aligned around a prominent avatar. */
+    CENTERED,
+    /** A coloured header band (name/role in it) over a light body. */
+    HEADER_BAND,
+    /** A vertical accent stripe down the leading edge. */
+    SIDE_STRIPE
+}
+
 /** The preset templates. `id` is what's persisted in `VisitingCard.template`. */
 enum class CardTemplate(
     val id: String,
     val label: String,
+    val layout: CardLayout,
     val defaultAccentHex: String,
     val defaultBackground: CardBackground,
     val defaultFont: CardFontStyle
 ) {
-    MINIMAL("minimal", "Minimal", "#3B5A9A", CardBackground.SURFACE, CardFontStyle.SANS),
-    BOLD("bold", "Bold", "#3B5A9A", CardBackground.SOLID, CardFontStyle.SANS),
-    CLASSIC("classic", "Classic", "#1A2D5A", CardBackground.SURFACE, CardFontStyle.SERIF),
-    GRADIENT("gradient", "Gradient", "#3B5A9A", CardBackground.GRADIENT, CardFontStyle.SANS),
-    ELEGANT("elegant", "Elegant", "#A87C0D", CardBackground.SURFACE, CardFontStyle.SERIF);
+    MINIMAL("minimal", "Minimal", CardLayout.STANDARD, "#3B5A9A", CardBackground.SURFACE, CardFontStyle.SANS),
+    EXECUTIVE("executive", "Executive", CardLayout.STANDARD, "#1A2D5A", CardBackground.SOLID, CardFontStyle.SERIF),
+    CLASSIC("classic", "Classic", CardLayout.HEADER_BAND, "#1A2D5A", CardBackground.SURFACE, CardFontStyle.SERIF),
+    CORPORATE("corporate", "Corporate", CardLayout.HEADER_BAND, "#0F4C81", CardBackground.SURFACE, CardFontStyle.SANS),
+    GRADIENT("gradient", "Gradient", CardLayout.CENTERED, "#3B5A9A", CardBackground.GRADIENT, CardFontStyle.SANS),
+    ELEGANT("elegant", "Elegant", CardLayout.CENTERED, "#A87C0D", CardBackground.SURFACE, CardFontStyle.SERIF),
+    MONOGRAM("monogram", "Monogram", CardLayout.CENTERED, "#B00020", CardBackground.SURFACE, CardFontStyle.SANS),
+    BOLD("bold", "Bold", CardLayout.STANDARD, "#263238", CardBackground.SOLID, CardFontStyle.SANS),
+    SIDEBAR("sidebar", "Sidebar", CardLayout.SIDE_STRIPE, "#00695C", CardBackground.SURFACE, CardFontStyle.SANS),
+    MODERN("modern", "Modern", CardLayout.STANDARD, "#6A1B9A", CardBackground.SURFACE, CardFontStyle.MONO);
 
     companion object {
         val DEFAULT = MINIMAL
@@ -71,10 +94,12 @@ enum class CardFontStyle(val id: String, val label: String, val family: FontFami
 val CardAccentSwatches: List<String> = listOf(
     "#3B5A9A", // Navy600 (primary)
     "#1A2D5A", // Navy900
+    "#0F4C81", // Corporate blue
+    "#263238", // Charcoal
+    "#00695C", // Teal
+    "#2E7D32", // Success green
     "#A87C0D", // Gold600
     "#D4A017", // Gold400
-    "#2E7D32", // Success green
-    "#00695C", // Teal
     "#6A1B9A", // Purple
     "#B00020"  // Crimson
 )
