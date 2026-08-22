@@ -62,7 +62,8 @@ import com.humblesolutions.humblecontacts.data.model.VisitingCard
 fun VisitingCardView(
     profile: UserProfile,
     card: VisitingCard,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     val style = card.resolveStyle()
 
@@ -70,14 +71,14 @@ fun VisitingCardView(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
         color = Color.Transparent,
-        shadowElevation = 3.dp
+        shadowElevation = if (compact) 0.dp else 3.dp
     ) {
         Box(Modifier.clip(RoundedCornerShape(20.dp))) {
             when (style.template.layout) {
-                CardLayout.STANDARD -> StandardCard(profile, card, style)
-                CardLayout.CENTERED -> CenteredCard(profile, card, style)
-                CardLayout.HEADER_BAND -> HeaderBandCard(profile, card, style)
-                CardLayout.SIDE_STRIPE -> SideStripeCard(profile, card, style)
+                CardLayout.STANDARD -> StandardCard(profile, card, style, compact)
+                CardLayout.CENTERED -> CenteredCard(profile, card, style, compact)
+                CardLayout.HEADER_BAND -> HeaderBandCard(profile, card, style, compact)
+                CardLayout.SIDE_STRIPE -> SideStripeCard(profile, card, style, compact)
             }
         }
     }
@@ -88,58 +89,58 @@ fun VisitingCardView(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun StandardCard(profile: UserProfile, card: VisitingCard, style: ResolvedCardStyle) {
+private fun StandardCard(profile: UserProfile, card: VisitingCard, style: ResolvedCardStyle, compact: Boolean) {
     val fill = surfacingFor(style.background, style.accent)
     val colors = paletteFor(fill.onAccent, style.accent)
     Column(
         Modifier
             .fillMaxWidth()
             .then(fill.modifier)
-            .padding(20.dp)
+            .padding(if (compact) 14.dp else 20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CardAvatar(profile.name, style.accent, fill.onAccent, size = 52.dp)
-            Spacer(Modifier.width(14.dp))
+            CardAvatar(profile.name, style.accent, fill.onAccent, size = if (compact) 40.dp else 52.dp)
+            Spacer(Modifier.width(if (compact) 10.dp else 14.dp))
             Column(Modifier.weight(1f)) {
-                NameText(profile, style, colors, TextAlign.Start)
+                NameText(profile, style, colors, TextAlign.Start, compact)
                 RoleText(profile, style, colors.secondary, TextAlign.Start)
             }
         }
         Headline(card, style, colors.primary)
-        Bio(card, style, colors.secondary)
-        Spacer(Modifier.height(14.dp))
+        if (!compact) Bio(card, style, colors.secondary)
+        Spacer(Modifier.height(if (compact) 10.dp else 14.dp))
         Divider(colors.divider)
-        Spacer(Modifier.height(14.dp))
-        ContactList(profile, card, colors, style)
+        Spacer(Modifier.height(if (compact) 10.dp else 14.dp))
+        ContactList(profile, card, colors, style, compact)
     }
 }
 
 @Composable
-private fun CenteredCard(profile: UserProfile, card: VisitingCard, style: ResolvedCardStyle) {
+private fun CenteredCard(profile: UserProfile, card: VisitingCard, style: ResolvedCardStyle, compact: Boolean) {
     val fill = surfacingFor(style.background, style.accent)
     val colors = paletteFor(fill.onAccent, style.accent)
     Column(
         Modifier
             .fillMaxWidth()
             .then(fill.modifier)
-            .padding(24.dp),
+            .padding(if (compact) 16.dp else 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CardAvatar(profile.name, style.accent, fill.onAccent, size = 68.dp)
-        Spacer(Modifier.height(12.dp))
-        NameText(profile, style, colors, TextAlign.Center)
+        CardAvatar(profile.name, style.accent, fill.onAccent, size = if (compact) 48.dp else 68.dp)
+        Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
+        NameText(profile, style, colors, TextAlign.Center, compact)
         RoleText(profile, style, colors.secondary, TextAlign.Center)
         HeadlineCentered(card, style, colors.primary)
-        BioCentered(card, style, colors.secondary)
-        Spacer(Modifier.height(14.dp))
+        if (!compact) BioCentered(card, style, colors.secondary)
+        Spacer(Modifier.height(if (compact) 10.dp else 14.dp))
         Divider(colors.divider)
-        Spacer(Modifier.height(14.dp))
-        ContactList(profile, card, colors, style)
+        Spacer(Modifier.height(if (compact) 10.dp else 14.dp))
+        ContactList(profile, card, colors, style, compact)
     }
 }
 
 @Composable
-private fun HeaderBandCard(profile: UserProfile, card: VisitingCard, style: ResolvedCardStyle) {
+private fun HeaderBandCard(profile: UserProfile, card: VisitingCard, style: ResolvedCardStyle, compact: Boolean) {
     // The band always uses the accent (solid, or gradient when chosen); the body
     // sits on the theme surface for legibility.
     val bandFill = surfacingFor(
@@ -147,6 +148,7 @@ private fun HeaderBandCard(profile: UserProfile, card: VisitingCard, style: Reso
         style.accent
     )
     val bodyColors = paletteFor(onAccent = false, accent = style.accent)
+    val pad = if (compact) 14.dp else 20.dp
     Column(
         Modifier
             .fillMaxWidth()
@@ -157,32 +159,33 @@ private fun HeaderBandCard(profile: UserProfile, card: VisitingCard, style: Reso
             Modifier
                 .fillMaxWidth()
                 .then(bandFill.modifier)
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(horizontal = pad, vertical = if (compact) 12.dp else 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            CardAvatar(profile.name, style.accent, onAccent = true, size = 52.dp)
-            Spacer(Modifier.width(14.dp))
+            CardAvatar(profile.name, style.accent, onAccent = true, size = if (compact) 40.dp else 52.dp)
+            Spacer(Modifier.width(if (compact) 10.dp else 14.dp))
             Column(Modifier.weight(1f)) {
-                NameText(profile, style, paletteFor(true, style.accent), TextAlign.Start)
+                NameText(profile, style, paletteFor(true, style.accent), TextAlign.Start, compact)
                 RoleText(profile, style, Color.White.copy(alpha = 0.85f), TextAlign.Start)
             }
         }
         // Body
-        Column(Modifier.padding(20.dp)) {
+        Column(Modifier.padding(pad)) {
             Headline(card, style, bodyColors.primary)
-            Bio(card, style, bodyColors.secondary)
-            if (card.headline.isNotBlank() || card.bio.isNotBlank()) {
+            if (!compact) Bio(card, style, bodyColors.secondary)
+            if (!compact && (card.headline.isNotBlank() || card.bio.isNotBlank())) {
                 Spacer(Modifier.height(14.dp))
                 Divider(bodyColors.divider)
                 Spacer(Modifier.height(14.dp))
             }
-            ContactList(profile, card, bodyColors, style)
+            if (compact) Spacer(Modifier.height(10.dp))
+            ContactList(profile, card, bodyColors, style, compact)
         }
     }
 }
 
 @Composable
-private fun SideStripeCard(profile: UserProfile, card: VisitingCard, style: ResolvedCardStyle) {
+private fun SideStripeCard(profile: UserProfile, card: VisitingCard, style: ResolvedCardStyle, compact: Boolean) {
     val stripeFill = surfacingFor(
         if (style.background == CardBackground.GRADIENT) CardBackground.GRADIENT else CardBackground.SOLID,
         style.accent
@@ -200,21 +203,21 @@ private fun SideStripeCard(profile: UserProfile, card: VisitingCard, style: Reso
                 .fillMaxHeight()
                 .then(stripeFill.modifier)
         )
-        Column(Modifier.padding(20.dp)) {
+        Column(Modifier.padding(if (compact) 14.dp else 20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CardAvatar(profile.name, style.accent, onAccent = false, size = 52.dp)
-                Spacer(Modifier.width(14.dp))
+                CardAvatar(profile.name, style.accent, onAccent = false, size = if (compact) 40.dp else 52.dp)
+                Spacer(Modifier.width(if (compact) 10.dp else 14.dp))
                 Column(Modifier.weight(1f)) {
-                    NameText(profile, style, colors, TextAlign.Start)
+                    NameText(profile, style, colors, TextAlign.Start, compact)
                     RoleText(profile, style, colors.secondary, TextAlign.Start)
                 }
             }
             Headline(card, style, colors.primary)
-            Bio(card, style, colors.secondary)
-            Spacer(Modifier.height(14.dp))
+            if (!compact) Bio(card, style, colors.secondary)
+            Spacer(Modifier.height(if (compact) 10.dp else 14.dp))
             Divider(colors.divider)
-            Spacer(Modifier.height(14.dp))
-            ContactList(profile, card, colors, style)
+            Spacer(Modifier.height(if (compact) 10.dp else 14.dp))
+            ContactList(profile, card, colors, style, compact)
         }
     }
 }
@@ -270,13 +273,19 @@ private fun surfacingFor(background: CardBackground, accent: Color): Surfacing =
 }
 
 @Composable
-private fun NameText(profile: UserProfile, style: ResolvedCardStyle, colors: CardPalette, align: TextAlign) {
+private fun NameText(
+    profile: UserProfile,
+    style: ResolvedCardStyle,
+    colors: CardPalette,
+    align: TextAlign,
+    compact: Boolean = false
+) {
     Text(
         text = profile.name.ifBlank { stringResource(R.string.card_your_name) },
         color = colors.name,
         fontFamily = style.font.family,
         fontWeight = FontWeight.Bold,
-        fontSize = 20.sp,
+        fontSize = if (compact) 15.sp else 20.sp,
         textAlign = align,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
@@ -381,28 +390,29 @@ private fun ContactList(
     profile: UserProfile,
     card: VisitingCard,
     colors: CardPalette,
-    style: ResolvedCardStyle
+    style: ResolvedCardStyle,
+    compact: Boolean = false
 ) {
     val share = profile.shareSettings
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (share.sharePhone && profile.phone.isNotBlank()) {
-            ContactRow(Icons.Outlined.Phone, "${profile.countryCode}${profile.phone}", colors, style)
-        }
-        if (share.shareEmail && profile.email.isNotBlank()) {
-            ContactRow(Icons.Outlined.Email, profile.email, colors, style)
-        }
-        if (share.shareLinkedIn && profile.linkedInUrl.isNotBlank()) {
-            ContactRow(Icons.Outlined.Link, profile.linkedInUrl, colors, style)
-        }
-        if (card.websiteUrl.isNotBlank()) {
-            ContactRow(Icons.Outlined.Language, card.websiteUrl, colors, style)
-        }
-        if (card.portfolioUrl.isNotBlank()) {
-            ContactRow(Icons.Outlined.WorkOutline, card.portfolioUrl, colors, style)
-        }
-        if (profile.address.isNotBlank()) {
-            ContactRow(Icons.Outlined.Place, profile.address, colors, style)
-        }
+    // Build the ordered, privacy-gated set of rows, then (in compact thumbnails)
+    // show only the first few so the mini-card stays a tidy, uniform height.
+    val rows = buildList<Pair<ImageVector, String>> {
+        if (share.sharePhone && profile.phone.isNotBlank())
+            add(Icons.Outlined.Phone to "${profile.countryCode}${profile.phone}")
+        if (share.shareEmail && profile.email.isNotBlank())
+            add(Icons.Outlined.Email to profile.email)
+        if (share.shareLinkedIn && profile.linkedInUrl.isNotBlank())
+            add(Icons.Outlined.Link to profile.linkedInUrl)
+        if (card.websiteUrl.isNotBlank())
+            add(Icons.Outlined.Language to card.websiteUrl)
+        if (card.portfolioUrl.isNotBlank())
+            add(Icons.Outlined.WorkOutline to card.portfolioUrl)
+        if (profile.address.isNotBlank())
+            add(Icons.Outlined.Place to profile.address)
+    }
+    val shown = if (compact) rows.take(3) else rows
+    Column(verticalArrangement = Arrangement.spacedBy(if (compact) 7.dp else 10.dp)) {
+        shown.forEach { (icon, text) -> ContactRow(icon, text, colors, style) }
     }
 }
 

@@ -178,17 +178,22 @@ fun VisitingCardScreen(
                     Spacer(Modifier.height(24.dp))
 
                     // ── Template ─────────────────────────────────────────────
+                    // Each option is a live thumbnail of the template's own
+                    // default look (with the user's real data), so the design is
+                    // visible before choosing — not just a name.
                     SectionLabel(stringResource(R.string.card_template))
+                    val selectedTemplateId = state.card.template.ifBlank { CardTemplate.DEFAULT.id }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         CardTemplate.entries.forEach { tpl ->
-                            SelectableChip(
-                                label = tpl.label,
-                                selected = state.card.template.ifBlank { CardTemplate.DEFAULT.id } == tpl.id,
+                            TemplateThumbnail(
+                                template = tpl,
+                                profile = profile,
+                                selected = selectedTemplateId == tpl.id,
                                 onClick = { viewModel.onTemplateChange(tpl.id) }
                             )
                         }
@@ -394,6 +399,68 @@ private fun SectionLabel(text: String) {
         letterSpacing = 0.8.sp
     )
     Spacer(Modifier.height(10.dp))
+}
+
+@Composable
+private fun TemplateThumbnail(
+    template: CardTemplate,
+    profile: com.humblesolutions.humblecontacts.data.model.UserProfile,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    // Show the template's OWN default look (blank overrides) with the user's data.
+    val previewCard = remember(template, profile.visitingCard) {
+        profile.visitingCard.copy(
+            template = template.id,
+            accentColor = "",
+            background = "",
+            fontStyle = ""
+        )
+    }
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.outlineVariant
+    Column(
+        modifier = Modifier.width(168.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .border(
+                    width = if (selected) 2.dp else 1.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(18.dp)
+                )
+                .clickable(onClick = onClick)
+                .padding(6.dp)
+        ) {
+            VisitingCardView(
+                profile = profile,
+                card = previewCard,
+                modifier = Modifier.fillMaxWidth(),
+                compact = true
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (selected) {
+                Icon(
+                    Icons.Outlined.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+            }
+            Text(
+                text = template.label,
+                fontSize = 13.sp,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
 }
 
 @Composable
