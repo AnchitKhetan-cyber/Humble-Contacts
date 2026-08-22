@@ -117,7 +117,7 @@ private fun StandardCard(profile: UserProfile, card: VisitingCard, style: Resolv
     }
 }
 
-/** Dark, formal, serif. Name over a short accent rule; no avatar. */
+/** Dark, formal, serif. Monogram beside a name over a short accent rule. */
 @Composable
 private fun ExecutiveCard(profile: UserProfile, card: VisitingCard, style: ResolvedCardStyle, compact: Boolean) {
     // Executive defaults to a solid dark fill; honour a background override too.
@@ -125,11 +125,17 @@ private fun ExecutiveCard(profile: UserProfile, card: VisitingCard, style: Resol
     val colors = paletteFor(fill.onAccent, style.accent)
     val ruleColor = if (fill.onAccent) Color.White.copy(alpha = 0.6f) else style.accent
     Column(Modifier.fillMaxWidth().then(fill.modifier).padding(pad(compact))) {
-        NameText(profile, style, colors, TextAlign.Start, compact, big = true)
-        Spacer(Modifier.height(if (compact) 6.dp else 8.dp))
-        Box(Modifier.width(if (compact) 28.dp else 40.dp).height(2.dp).background(ruleColor))
-        Spacer(Modifier.height(if (compact) 6.dp else 8.dp))
-        RoleText(profile, style, colors.secondary, TextAlign.Start)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Monogram(profile.name, style.accent, fill.onAccent, sz(48.dp, compact))
+            Spacer(Modifier.width(sp2(compact)))
+            Column(Modifier.weight(1f)) {
+                NameText(profile, style, colors, TextAlign.Start, compact, big = true)
+                Spacer(Modifier.height(if (compact) 5.dp else 7.dp))
+                Box(Modifier.width(if (compact) 28.dp else 40.dp).height(2.dp).background(ruleColor))
+                Spacer(Modifier.height(if (compact) 5.dp else 7.dp))
+                RoleText(profile, style, colors.secondary, TextAlign.Start)
+            }
+        }
         Headline(card, style, colors.primary)
         GapDivider(colors.divider, compact)
         ContactList(gatedContacts(profile, card), colors, style, compact)
@@ -221,6 +227,8 @@ private fun FramedCard(profile: UserProfile, card: VisitingCard, style: Resolved
         Modifier.fillMaxWidth().then(fill.modifier).padding(if (compact) 18.dp else 26.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Monogram(profile.name, style.accent, fill.onAccent, sz(52.dp, compact), ringed = true)
+        Spacer(Modifier.height(if (compact) 10.dp else 14.dp))
         Box(Modifier.width(if (compact) 40.dp else 56.dp).height(1.dp).background(line))
         Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
         Text(
@@ -271,6 +279,8 @@ private fun BoldTypeCard(profile: UserProfile, card: VisitingCard, style: Resolv
     val fill = surfacingFor(style.background, style.accent)
     val colors = paletteFor(fill.onAccent, style.accent)
     Column(Modifier.fillMaxWidth().then(fill.modifier).padding(pad(compact))) {
+        Monogram(profile.name, style.accent, fill.onAccent, sz(44.dp, compact))
+        Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
         Text(
             text = profile.name.ifBlank { stringResource(R.string.card_your_name) },
             color = colors.name,
