@@ -603,7 +603,15 @@ fun AppNavGraph(
             )
         }
 
-        appComposable(route = Routes.VISITING_CARD) {
+        appComposable(
+            route = Routes.VISITING_CARD,
+            // Explicit slide transitions so the editor animates in/out like every
+            // other pushed screen — including the slide-out on back / after save.
+            enterTransition = { slideIn },
+            exitTransition = { slideOut },
+            popEnterTransition = { popIn },
+            popExitTransition = { popOut }
+        ) {
             VisitingCardScreen(
                 onBack = { navController.popBackStack() }
             )
