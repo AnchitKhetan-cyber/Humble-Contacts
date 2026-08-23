@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.humblesolutions.humblecontacts.data.model.UserProfile
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
 import com.humblesolutions.humblecontacts.utils.generateQrBitmap
 
@@ -62,6 +63,41 @@ data class LinkedAccount(
 )
 
 /**
+ * Builds a vCard 3.0 string for the user's own contact details, honouring their
+ * per-field [com.humblesolutions.humblecontacts.data.model.ShareSettings]. Used
+ * for the "Contact" QR in the QR Codes section: scanning it with Humble Contacts
+ * routes to Add Contact (the app handles `BEGIN:VCARD`), saving the person.
+ * Fields the user has toggled off are omitted.
+ */
+fun profileVCard(profile: UserProfile): String {
+    val share = profile.shareSettings
+    fun esc(v: String) = v
+        .replace("\\", "\\\\").replace("\n", "\\n")
+        .replace(",", "\\,").replace(";", "\\;")
+
+    val sb = StringBuilder()
+    sb.append("BEGIN:VCARD\r\nVERSION:3.0\r\n")
+    if (profile.name.isNotBlank()) {
+        sb.append("N:;").append(esc(profile.name)).append(";;;\r\n")
+        sb.append("FN:").append(esc(profile.name)).append("\r\n")
+    }
+    if (share.shareCompany && profile.company.isNotBlank())
+        sb.append("ORG:").append(esc(profile.company)).append("\r\n")
+    if (profile.profession.isNotBlank())
+        sb.append("TITLE:").append(esc(profile.profession)).append("\r\n")
+    if (share.sharePhone && profile.phone.isNotBlank())
+        sb.append("TEL;TYPE=CELL:").append(esc("${profile.countryCode}${profile.phone}")).append("\r\n")
+    if (share.shareEmail && profile.email.isNotBlank())
+        sb.append("EMAIL;TYPE=INTERNET:").append(esc(profile.email)).append("\r\n")
+    if (share.shareLinkedIn && profile.linkedInUrl.isNotBlank())
+        sb.append("URL:").append(esc(profile.linkedInUrl)).append("\r\n")
+    if (profile.address.isNotBlank())
+        sb.append("ADR;TYPE=WORK:;;").append(esc(profile.address)).append(";;;;\r\n")
+    sb.append("END:VCARD\r\n")
+    return sb.toString()
+}
+
+/**
  * Builds the content that gets encoded into the QR code for a given account.
  * Using proper URI schemes (tel:, mailto:, https://wa.me/, https://...) means
  * scanning the code with any standard QR scanner will redirect straight to
@@ -69,6 +105,8 @@ data class LinkedAccount(
  */
 fun qrContentFor(account: LinkedAccount): String {
     return when (account.title) {
+        // The value is already a full vCard; encode it verbatim.
+        "Contact" -> account.value
         "Phone" -> "tel:${account.value}"
         "Email" -> "mailto:${account.value}"
         "WhatsApp" -> {
@@ -281,8 +319,9 @@ fun QrCodeDialog(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                // The Contact QR's value is a whole vCard — don't dump it as text.
                 Text(
-                    account.value,
+                    if (account.title == "Contact") "Opens in Humble Contacts" else account.value,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -298,6 +337,7 @@ fun QrCodeDialog(
 }
 
 fun actionLabel(title: String): String = when (title) {
+    "Contact" -> "save this contact"
     "Phone" -> "call this number"
     "Email" -> "send an email"
     "WhatsApp" -> "open WhatsApp chat"

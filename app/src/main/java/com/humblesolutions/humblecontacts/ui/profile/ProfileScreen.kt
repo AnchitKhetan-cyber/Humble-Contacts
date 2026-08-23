@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Whatsapp
 import androidx.compose.material.icons.outlined.*
@@ -125,6 +126,8 @@ fun ProfileScreen(
         qrAccounts.clear()
         if (profile != null) {
             val share = profile.shareSettings
+            // Full-contact vCard QR: scanning it in Humble Contacts saves the person.
+            qrAccounts.add(LinkedAccount("Contact", profileVCard(profile)))
             if (share.sharePhone && profile.phone.isNotBlank()) {
                 val full = "${profile.countryCode}${profile.phone}"
                 qrAccounts.add(LinkedAccount("Phone", full))
@@ -561,6 +564,7 @@ private fun QrIconCard(
     onClick: () -> Unit
 ) {
     val (icon, bg, tint) = when (account.title) {
+        "Contact"  -> Triple(Icons.Default.Person,        Color(0xFFEDE7F6), Color(0xFF5E35B1))
         "Phone"    -> Triple(Icons.Default.Phone,         Color(0xFFE8F5E9), Color(0xFF2E7D32))
         "Email"    -> Triple(Icons.Default.Email,        Color(0xFFE3F2FD), Color(0xFF1565C0))
         "WhatsApp" -> Triple(Icons.Default.Whatsapp, Color(0xFFE8F5E9), Color(0xFF1B5E20))
