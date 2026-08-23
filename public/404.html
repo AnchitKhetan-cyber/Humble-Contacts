@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Save contact · Humble Contacts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" />
+  <style>
+    :root {
+      --navy: #3B5A9A;
+      --navy-deep: #1A2D5A;
+      --gold: #D4A017;
+      --ink: #1C1C1E;
+      --muted: #636366;
+      --card: #FFFFFF;
+      --bg: #F5F7FC;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink: #ECF0FB; --muted: #8FA8CC; --card: #1A2440; --bg: #0F1523; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--ink);
+      display: grid; place-items: center;
+      padding: 24px calc(24px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      width: 100%; max-width: 380px; background: var(--card);
+      border-radius: 22px; padding: 32px 26px 28px;
+      box-shadow: 0 12px 40px rgba(26,45,90,.14); text-align: center;
+    }
+    .badge {
+      width: 68px; height: 68px; margin: 0 auto 18px; border-radius: 20px;
+      background: linear-gradient(135deg, var(--navy), var(--navy-deep));
+      display: grid; place-items: center;
+      color: #fff; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 30px;
+      box-shadow: 0 6px 18px rgba(59,90,154,.4);
+    }
+    h1 { font-family: 'Sora', sans-serif; font-size: 22px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.01em; }
+    .name { color: var(--navy); }
+    @media (prefers-color-scheme: dark) { .name { color: #8FA8CC; } }
+    p { margin: 0 0 24px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+    .btn {
+      display: block; width: 100%; text-decoration: none; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-weight: 600; font-size: 16px;
+      padding: 15px 18px; border-radius: 14px;
+    }
+    .btn-primary { background: var(--navy); color: #fff; box-shadow: 0 4px 14px rgba(59,90,154,.35); }
+    .btn-ghost { background: transparent; color: var(--muted); font-weight: 500; font-size: 14px; padding-top: 14px; }
+    .brand { margin-top: 22px; font-family: 'Sora', sans-serif; font-weight: 600; font-size: 13px; color: var(--muted); letter-spacing: .02em; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="badge" id="badge">HC</div>
+    <h1 id="title">Save this contact</h1>
+    <p id="subtitle">Install <strong>Humble Contacts</strong> to open this card and save the details to your contacts.</p>
+
+    <a class="btn btn-primary"
+       href="https://play.google.com/store/apps/details?id=com.humblesolutions.humblecontacts">
+      Install on Google&nbsp;Play
+    </a>
+
+    <a class="btn btn-ghost" id="openApp" href="#">Already have the app? Open it</a>
+
+    <div class="brand">Humble Contacts</div>
+  </main>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var vcard = params.get("vcard") || "";
+
+      // Pull the contact's name (FN) out of the vCard, if present, to personalise.
+      var name = "";
+      var m = /(^|\n)FN:(.+)/i.exec(vcard.replace(/\r/g, ""));
+      if (m) name = m[2].trim().replace(/\\,/g, ",").replace(/\\;/g, ";");
+
+      if (name) {
+        var first = name.split(" ")[0];
+        document.getElementById("title").innerHTML =
+          'Save <span class="name">' + escapeHtml(name) + '</span>';
+        document.getElementById("subtitle").innerHTML =
+          "Install <strong>Humble Contacts</strong> to save " + escapeHtml(first) +
+          "’s details to your contacts.";
+        var initials = name.split(" ").map(function (w) { return w[0]; })
+          .slice(0, 2).join("").toUpperCase();
+        if (initials) document.getElementById("badge").textContent = initials;
+      }
+
+      // "Open it" tries to launch the installed app via an Android intent URL,
+      // falling back to the Play Store if it isn't installed.
+      var intentUrl = "intent://" + location.host + "/add?vcard=" +
+        encodeURIComponent(vcard) +
+        "#Intent;scheme=https;package=com.humblesolutions.humblecontacts;" +
+        "S.browser_fallback_url=" +
+        encodeURIComponent("https://play.google.com/store/apps/details?id=com.humblesolutions.humblecontacts") +
+        ";end";
+      document.getElementById("openApp").setAttribute("href", intentUrl);
+
+      function escapeHtml(s) {
+        return s.replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
