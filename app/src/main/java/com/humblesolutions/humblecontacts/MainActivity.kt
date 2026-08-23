@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
          * and with the domain that serves /.well-known/assetlinks.json.
          * See docs/applink-contact-domain-setup.md.
          */
-        const val CONTACT_LINK_HOST = "links.humblecontacts.app"
+        const val CONTACT_LINK_HOST = "humble-contacts-2e9c9.web.app"
     }
 
     private val requestNotificationPermission =

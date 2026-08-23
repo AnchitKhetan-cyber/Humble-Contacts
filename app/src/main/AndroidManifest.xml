@@ -92,7 +92,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="links.humblecontacts.app"
+                    android:host="humble-contacts-2e9c9.web.app"
                     android:pathPrefix="/contact/" />
                 <!--
                   Contact-save App Link: https://<host>/add?vcard=<vCard>.
@@ -102,7 +102,7 @@
                 -->
                 <data
                     android:scheme="https"
-                    android:host="links.humblecontacts.app"
+                    android:host="humble-contacts-2e9c9.web.app"
                     android:pathPrefix="/add" />
             </intent-filter>
 
