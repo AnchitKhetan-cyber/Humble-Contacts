@@ -11,6 +11,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +52,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,7 +81,7 @@ import com.humblesolutions.humblecontacts.ui.profile.card.CardTemplate
 import com.humblesolutions.humblecontacts.ui.profile.card.VisitingCardView
 import com.humblesolutions.humblecontacts.ui.profile.card.parseHexColor
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun VisitingCardScreen(
     onBack: () -> Unit,
@@ -86,12 +92,23 @@ fun VisitingCardScreen(
     // Moves focus between the card's text fields on "Next" and dismisses the
     // keyboard on "Done".
     val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+    val imeVisible = WindowInsets.isImeVisible
 
-    // Dismiss the keyboard before leaving so it doesn't collapse on top of (and
-    // visually swallow) the screen's slide-out transition.
-    val exitScreen = {
-        focusManager.clearFocus(force = true)
-        onBack()
+    // Leave the screen. If the keyboard is up, dismiss it and let it finish
+    // hiding first — otherwise the IME collapse (and the imePadding it drives)
+    // jerks the layout right as the slide-out starts. With no keyboard, pop
+    // immediately so a normal back press stays instant.
+    val exitScreen: () -> Unit = {
+        if (imeVisible) {
+            focusManager.clearFocus(force = true)
+            scope.launch {
+                delay(240)
+                onBack()
+            }
+        } else {
+            onBack()
+        }
     }
 
     // One-shot feedback for save results.
