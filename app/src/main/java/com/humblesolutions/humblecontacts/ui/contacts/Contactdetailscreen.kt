@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
+import com.humblesolutions.humblecontacts.utils.VoiceNoteRecorder
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
@@ -181,6 +182,64 @@ fun ContactDetailScreen(
                 }
             }
         }
+
+    // ── Voice notes (#voice-notes) ────────────────────────────────────────────
+    var showRecordDialog by remember { mutableStateOf(false) }
+    var isUploadingVoice by remember { mutableStateOf(false) }
+    val recorder = remember { VoiceNoteRecorder(context) }
+
+    // Uploads a finished recording to Storage and appends a voice ContactNote to
+    // the same conversation-notes timeline the text notes use.
+    val saveVoiceNote: (java.io.File, Long) -> Unit = { file, durationMs ->
+        contact?.let { current ->
+            isUploadingVoice = true
+            scope.launch {
+                try {
+                    val fileName = "${UUID.randomUUID()}.m4a"
+                    val ref = Firebase.storage.reference
+                        .child("contacts").child(current.contactId).child("voice").child(fileName)
+                    ref.putFile(Uri.fromFile(file)).await()
+                    val url = ref.downloadUrl.await().toString()
+                    val updated = current.conversationNotes + ContactNote(
+                        createdAt = Timestamp.now(),
+                        audioUrl = url,
+                        durationMs = durationMs
+                    )
+                    Firebase.firestore.collection("contacts").document(current.contactId)
+                        .update("conversationNotes", updated).await()
+                    contact = current.copy(conversationNotes = updated)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Couldn't save voice note", Toast.LENGTH_LONG).show()
+                } finally {
+                    isUploadingVoice = false
+                    file.delete()
+                }
+            }
+        }
+    }
+
+    val recordPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            if (recorder.start()) showRecordDialog = true
+            else Toast.makeText(context, "Couldn't start recording", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Microphone permission is needed to record a voice note", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    val startVoiceRecording: () -> Unit = {
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.RECORD_AUDIO
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            if (recorder.start()) showRecordDialog = true
+            else Toast.makeText(context, "Couldn't start recording", Toast.LENGTH_SHORT).show()
+        } else {
+            recordPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     LaunchedEffect(contactId) {
         if (contactId.isNotBlank()) {
@@ -471,10 +530,13 @@ fun ContactDetailScreen(
                 )
                 1 -> NotesTab(
                     notes = c.conversationNotes,
+                    isUploadingVoice = isUploadingVoice,
 
                     onAddNote = {
                         showAddNoteDialog = true
                     },
+
+                    onRecordVoice = { startVoiceRecording() },
 
                     onEditNote = { note ->
                         noteToEdit = note
@@ -730,6 +792,20 @@ fun ContactDetailScreen(
                                 contact = currentContact.copy(
                                     conversationNotes = updatedNotes
                                 )
+
+                                // Best-effort: remove the voice-note audio from
+                                // Storage so it doesn't orphan (privacy + cost).
+                                if (note.isVoice) {
+                                    scope.launch {
+                                        try {
+                                            Firebase.storage
+                                                .getReferenceFromUrl(note.audioUrl)
+                                                .delete().await()
+                                        } catch (e: Exception) {
+                                            android.util.Log.w("CONTACT_DEBUG", "Voice note delete skipped", e)
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -753,6 +829,26 @@ fun ContactDetailScreen(
                 ) {
                     Text("Cancel")
                 }
+            }
+        )
+    }
+
+    if (showRecordDialog) {
+        RecordVoiceDialog(
+            onStop = {
+                showRecordDialog = false
+                val file = recorder.stop()
+                val dur = recorder.durationMs
+                if (file != null && dur >= 1000) {
+                    saveVoiceNote(file, dur)
+                } else {
+                    file?.delete()
+                    Toast.makeText(context, "Recording too short", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onCancel = {
+                showRecordDialog = false
+                recorder.stop()?.delete()
             }
         )
     }
@@ -1115,9 +1211,56 @@ private fun InfoRow(
 // ─── Notes Tab — real data ────────────────────────────────────────────────────
 
 @Composable
+private fun RecordVoiceDialog(
+    onStop: () -> Unit,
+    onCancel: () -> Unit
+) {
+    var elapsed by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(1000)
+            elapsed++
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onCancel,
+        icon = {
+            Icon(
+                Icons.Outlined.Mic,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = { Text("Recording voice note") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "%d:%02d".format(elapsed / 60, elapsed % 60),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Tap Stop & save when you're done.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onStop) { Text("Stop & save") } },
+        dismissButton = { TextButton(onClick = onCancel) { Text("Cancel") } }
+    )
+}
+
+@Composable
 private fun NotesTab(
     notes: List<ContactNote>,
+    isUploadingVoice: Boolean,
     onAddNote: () -> Unit,
+    onRecordVoice: () -> Unit,
     onEditNote: (ContactNote) -> Unit,
     onDeleteNote: (ContactNote) -> Unit
 ){
@@ -1136,7 +1279,7 @@ private fun NotesTab(
             Column(modifier = Modifier.padding(16.dp)) {
 
                 val validNotes = notes
-                    .filter { it.text.isNotBlank() }
+                    .filter { it.text.isNotBlank() || it.isVoice }
                     .sortedByDescending { it.createdAt?.seconds ?: 0L }
 
                 if (validNotes.isEmpty()) {
@@ -1188,22 +1331,25 @@ private fun NotesTab(
                                     ) {
 
                                         Text(
-                                            text = "Note ${index + 1}",
+                                            text = if (note.isVoice) "Voice note" else "Note ${index + 1}",
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.weight(1f)
                                         )
 
-                                        IconButton(
-                                            onClick = {
-                                                onEditNote(note)
+                                        // Voice notes aren't text-editable — delete only.
+                                        if (!note.isVoice) {
+                                            IconButton(
+                                                onClick = {
+                                                    onEditNote(note)
+                                                }
+                                            ) {
+                                                Icon(
+                                                    Icons.Outlined.Edit,
+                                                    contentDescription = "Edit Note"
+                                                )
                                             }
-                                        ) {
-                                            Icon(
-                                                Icons.Outlined.Edit,
-                                                contentDescription = "Edit Note"
-                                            )
                                         }
 
                                         IconButton(
@@ -1229,14 +1375,21 @@ private fun NotesTab(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
 
-                                    Spacer(Modifier.height(6.dp))
+                                    Spacer(Modifier.height(if (note.isVoice) 10.dp else 6.dp))
 
-                                    Text(
-                                        text = note.text,
-                                        fontSize = 14.sp,
-                                        lineHeight = 20.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    if (note.isVoice) {
+                                        VoiceNotePlayer(
+                                            audioUrl = note.audioUrl,
+                                            durationMs = note.durationMs
+                                        )
+                                    } else {
+                                        Text(
+                                            text = note.text,
+                                            fontSize = 14.sp,
+                                            lineHeight = 20.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1247,14 +1400,30 @@ private fun NotesTab(
 
         Spacer(Modifier.height(12.dp))
 
-        OutlinedButton(
-            onClick = onAddNote,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Add Note")
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(
+                onClick = onAddNote,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Add Note")
+            }
+            OutlinedButton(
+                onClick = onRecordVoice,
+                enabled = !isUploadingVoice,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                if (isUploadingVoice) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Outlined.Mic, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(if (isUploadingVoice) "Saving…" else "Record")
+            }
         }
     }
 }
