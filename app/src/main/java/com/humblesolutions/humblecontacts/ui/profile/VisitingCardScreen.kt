@@ -87,13 +87,20 @@ fun VisitingCardScreen(
     // keyboard on "Done".
     val focusManager = LocalFocusManager.current
 
+    // Dismiss the keyboard before leaving so it doesn't collapse on top of (and
+    // visually swallow) the screen's slide-out transition.
+    val exitScreen = {
+        focusManager.clearFocus(force = true)
+        onBack()
+    }
+
     // One-shot feedback for save results.
     LaunchedEffect(state.saveSuccess) {
         if (state.saveSuccess) {
             Toast.makeText(context, context.getString(R.string.card_saved), Toast.LENGTH_SHORT).show()
             viewModel.consumeSaveSuccess()
             // Return to the previous screen once the card is saved.
-            onBack()
+            exitScreen()
         }
     }
     LaunchedEffect(state.saveError) {
@@ -109,7 +116,7 @@ fun VisitingCardScreen(
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.card_title), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = exitScreen) {
                         Icon(
                             Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = stringResource(R.string.card_back)
