@@ -3,111 +3,172 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Save contact · Humble Contacts</title>
+  <title>Contact · Humble Contacts</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" />
   <style>
     :root {
-      --navy: #3B5A9A;
-      --navy-deep: #1A2D5A;
-      --gold: #D4A017;
-      --ink: #1C1C1E;
-      --muted: #636366;
-      --card: #FFFFFF;
-      --bg: #F5F7FC;
+      --navy: #3B5A9A; --navy-deep: #1A2D5A; --gold: #D4A017;
+      --ink: #1C1C1E; --muted: #636366; --line: #E4E9F3;
+      --card: #FFFFFF; --chip: #F1F5FC; --bg: #F5F7FC;
     }
     @media (prefers-color-scheme: dark) {
-      :root { --ink: #ECF0FB; --muted: #8FA8CC; --card: #1A2440; --bg: #0F1523; }
+      :root { --ink:#ECF0FB; --muted:#8FA8CC; --line:#2C3A63; --card:#1A2440; --chip:#243058; --bg:#0F1523; --navy:#8FA8CC; }
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
+    html, body { margin: 0; min-height: 100%; }
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg); color: var(--ink);
-      display: grid; place-items: center;
-      padding: 24px calc(24px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
-      -webkit-font-smoothing: antialiased;
+      background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased;
+      display: grid; place-items: start center;
+      padding: 28px calc(20px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
     }
     .card {
-      width: 100%; max-width: 380px; background: var(--card);
-      border-radius: 22px; padding: 32px 26px 28px;
-      box-shadow: 0 12px 40px rgba(26,45,90,.14); text-align: center;
+      width: 100%; max-width: 400px; background: var(--card);
+      border-radius: 24px; overflow: hidden; box-shadow: 0 14px 44px rgba(26,45,90,.16);
+    }
+    .hero {
+      background: linear-gradient(135deg, var(--navy), var(--navy-deep));
+      padding: 30px 24px 24px; text-align: center; color: #fff;
     }
     .badge {
-      width: 68px; height: 68px; margin: 0 auto 18px; border-radius: 20px;
-      background: linear-gradient(135deg, var(--navy), var(--navy-deep));
-      display: grid; place-items: center;
-      color: #fff; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 30px;
-      box-shadow: 0 6px 18px rgba(59,90,154,.4);
+      width: 76px; height: 76px; margin: 0 auto 14px; border-radius: 50%;
+      background: rgba(255,255,255,.18); display: grid; place-items: center;
+      font-family: 'Sora', sans-serif; font-weight: 700; font-size: 30px; color: #fff;
     }
-    h1 { font-family: 'Sora', sans-serif; font-size: 22px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.01em; }
-    .name { color: var(--navy); }
-    @media (prefers-color-scheme: dark) { .name { color: #8FA8CC; } }
-    p { margin: 0 0 24px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+    .name { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 23px; margin: 0; line-height: 1.2; }
+    .role { margin: 6px 0 0; font-size: 14px; color: rgba(255,255,255,.85); }
+    .body { padding: 18px 22px 24px; }
+    .rows { display: flex; flex-direction: column; gap: 2px; }
+    a.row, .row {
+      display: flex; align-items: center; gap: 14px; padding: 12px 8px; border-radius: 12px;
+      text-decoration: none; color: var(--ink); font-size: 15px;
+    }
+    a.row:active { background: var(--chip); }
+    .row .ic { width: 20px; height: 20px; color: var(--navy); flex: none; }
+    .row .val { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .divider { height: 1px; background: var(--line); margin: 8px 0 14px; }
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
     .btn {
-      display: block; width: 100%; text-decoration: none; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      width: 100%; text-decoration: none; border: none; cursor: pointer;
       font-family: 'Inter', sans-serif; font-weight: 600; font-size: 16px;
       padding: 15px 18px; border-radius: 14px;
     }
     .btn-primary { background: var(--navy); color: #fff; box-shadow: 0 4px 14px rgba(59,90,154,.35); }
-    .btn-ghost { background: transparent; color: var(--muted); font-weight: 500; font-size: 14px; padding-top: 14px; }
-    .brand { margin-top: 22px; font-family: 'Sora', sans-serif; font-weight: 600; font-size: 13px; color: var(--muted); letter-spacing: .02em; }
+    .btn-ghost { background: var(--chip); color: var(--ink); }
+    .btn .ic { width: 18px; height: 18px; }
+    .foot { text-align: center; margin-top: 18px; font-family: 'Sora', sans-serif; font-weight: 600; font-size: 12px; color: var(--muted); letter-spacing: .03em; }
+    .empty { text-align:center; color: var(--muted); font-size: 15px; padding: 6px 0 2px; }
   </style>
 </head>
 <body>
   <main class="card">
-    <div class="badge" id="badge">HC</div>
-    <h1 id="title">Save this contact</h1>
-    <p id="subtitle">Install <strong>Humble Contacts</strong> to open this card and save the details to your contacts.</p>
-
-    <a class="btn btn-primary"
-       href="https://play.google.com/store/apps/details?id=com.humblesolutions.humblecontacts">
-      Install on Google&nbsp;Play
-    </a>
-
-    <a class="btn btn-ghost" id="openApp" href="#">Already have the app? Open it</a>
-
-    <div class="brand">Humble Contacts</div>
+    <div class="hero">
+      <div class="badge" id="badge">HC</div>
+      <h1 class="name" id="name">Contact</h1>
+      <p class="role" id="role" style="display:none"></p>
+    </div>
+    <div class="body">
+      <div class="rows" id="rows"></div>
+      <div class="empty" id="empty" style="display:none">Scan a Humble Contacts card to view its details here.</div>
+      <div class="divider" id="divider" style="display:none"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="save" style="display:none">
+          <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v10m0 0 4-4m-4 4-4-4M4 16h12"/></svg>
+          Save to contacts
+        </button>
+        <a class="btn btn-ghost" id="openApp" href="#">Open in Humble&nbsp;Contacts app</a>
+      </div>
+      <div class="foot">Humble Contacts</div>
+    </div>
   </main>
 
   <script>
     (function () {
-      var params = new URLSearchParams(location.search);
-      var vcard = params.get("vcard") || "";
+      var raw = new URLSearchParams(location.search).get("vcard") || "";
+      var vcard = raw.trim();
 
-      // Pull the contact's name (FN) out of the vCard, if present, to personalise.
-      var name = "";
-      var m = /(^|\n)FN:(.+)/i.exec(vcard.replace(/\r/g, ""));
-      if (m) name = m[2].trim().replace(/\\,/g, ",").replace(/\\;/g, ";");
+      function unescape(s) {
+        return s.replace(/\\n/gi, " ").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\").trim();
+      }
+      function esc(s) { return s.replace(/[&<>"']/g, function (c) {
+        return { "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]; }); }
 
-      if (name) {
-        var first = name.split(" ")[0];
-        document.getElementById("title").innerHTML =
-          'Save <span class="name">' + escapeHtml(name) + '</span>';
-        document.getElementById("subtitle").innerHTML =
-          "Install <strong>Humble Contacts</strong> to save " + escapeHtml(first) +
-          "’s details to your contacts.";
-        var initials = name.split(" ").map(function (w) { return w[0]; })
-          .slice(0, 2).join("").toUpperCase();
-        if (initials) document.getElementById("badge").textContent = initials;
+      // Parse the vCard fields we care about.
+      var fields = { name:"", title:"", org:"", tel:"", email:"", url:[], adr:"" };
+      vcard.replace(/\r/g, "").split("\n").forEach(function (line) {
+        var i = line.indexOf(":"); if (i < 0) return;
+        var key = line.slice(0, i).split(";")[0].toUpperCase();
+        var v = unescape(line.slice(i + 1));
+        if (!v) return;
+        if (key === "FN") fields.name = v;
+        else if (key === "TITLE") fields.title = v;
+        else if (key === "ORG") fields.org = v.split(";")[0];
+        else if (key === "TEL" && !fields.tel) fields.tel = v;
+        else if (key === "EMAIL" && !fields.email) fields.email = v;
+        else if (key === "URL") fields.url.push(v);
+        else if (key === "ADR" && !fields.adr) fields.adr = v.split(";").filter(Boolean).join(", ");
+      });
+
+      var hasCard = !!(fields.name || fields.tel || fields.email);
+      if (!hasCard) {
+        document.getElementById("empty").style.display = "block";
+        document.getElementById("openApp").style.display = "none";
+        return;
       }
 
-      // "Open it" tries to launch the installed app via an Android intent URL,
-      // falling back to the Play Store if it isn't installed.
-      var intentUrl = "intent://" + location.host + "/add?vcard=" +
-        encodeURIComponent(vcard) +
+      // Header
+      document.getElementById("name").textContent = fields.name || "Contact";
+      var roleLine = [fields.title, fields.org].filter(Boolean).join(" · ");
+      if (roleLine) { var r = document.getElementById("role"); r.textContent = roleLine; r.style.display = "block"; }
+      var initials = (fields.name || "?").split(" ").map(function (w){return w[0];}).slice(0,2).join("").toUpperCase();
+      document.getElementById("badge").textContent = initials || "HC";
+
+      // Detect a LinkedIn URL vs generic websites
+      var linkedin = fields.url.filter(function (u){ return /linkedin\.com/i.test(u); })[0] || "";
+      var sites = fields.url.filter(function (u){ return u !== linkedin; });
+
+      var ICON = {
+        phone:'<path d="M6.5 3h-3S2 3 2 4.5c0 8 5.5 13.5 13.5 13.5C17 18 17 16.5 17 16.5v-3l-4-1-1.5 2A11 11 0 0 1 6.5 8L8.5 6.5z"/>',
+        mail:'<rect x="2" y="4" width="16" height="12" rx="2"/><path d="m3 5 7 6 7-6"/>',
+        link:'<path d="M8 11a3.5 3.5 0 0 0 5 0l2-2a3.5 3.5 0 0 0-5-5l-1 1M12 9a3.5 3.5 0 0 0-5 0l-2 2a3.5 3.5 0 0 0 5 5l1-1"/>',
+        globe:'<circle cx="10" cy="10" r="8"/><path d="M2 10h16M10 2c2.5 2.5 2.5 13 0 16M10 2c-2.5 2.5-2.5 13 0 16"/>',
+        pin:'<path d="M10 18s6-5.2 6-9.5A6 6 0 0 0 4 8.5C4 12.8 10 18 10 18Z"/><circle cx="10" cy="8.5" r="2"/>'
+      };
+      function svg(p){ return '<svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'; }
+      function href(u){ return /^https?:\/\//i.test(u) ? u : "https://" + u; }
+
+      var rows = [];
+      if (fields.tel)   rows.push('<a class="row" href="tel:'+esc(fields.tel)+'">'+svg(ICON.phone)+'<span class="val">'+esc(fields.tel)+'</span></a>');
+      if (fields.email) rows.push('<a class="row" href="mailto:'+esc(fields.email)+'">'+svg(ICON.mail)+'<span class="val">'+esc(fields.email)+'</span></a>');
+      if (linkedin)     rows.push('<a class="row" href="'+esc(href(linkedin))+'" target="_blank" rel="noopener">'+svg(ICON.link)+'<span class="val">'+esc(linkedin.replace(/^https?:\/\//,''))+'</span></a>');
+      sites.forEach(function (s){ rows.push('<a class="row" href="'+esc(href(s))+'" target="_blank" rel="noopener">'+svg(ICON.globe)+'<span class="val">'+esc(s.replace(/^https?:\/\//,''))+'</span></a>'); });
+      if (fields.adr)   rows.push('<div class="row">'+svg(ICON.pin)+'<span class="val">'+esc(fields.adr)+'</span></div>');
+      document.getElementById("rows").innerHTML = rows.join("");
+      document.getElementById("divider").style.display = "block";
+
+      // Save-to-contacts: download the vCard as a .vcf, which phones import.
+      var saveBtn = document.getElementById("save");
+      saveBtn.style.display = "flex";
+      saveBtn.addEventListener("click", function () {
+        var vcf = vcard.indexOf("BEGIN:VCARD") === 0 ? vcard : "BEGIN:VCARD\r\nVERSION:3.0\r\n" + vcard + "\r\nEND:VCARD";
+        var blob = new Blob([vcf], { type: "text/vcard;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = (fields.name || "contact").replace(/[^a-z0-9]+/gi, "_") + ".vcf";
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+      });
+
+      // Optional: open/install the app, passing the same link through.
+      var intentUrl = "intent://" + location.host + "/add?vcard=" + encodeURIComponent(vcard) +
         "#Intent;scheme=https;package=com.humblesolutions.humblecontacts;" +
         "S.browser_fallback_url=" +
-        encodeURIComponent("https://play.google.com/store/apps/details?id=com.humblesolutions.humblecontacts") +
-        ";end";
+        encodeURIComponent("https://play.google.com/store/apps/details?id=com.humblesolutions.humblecontacts") + ";end";
       document.getElementById("openApp").setAttribute("href", intentUrl);
-
-      function escapeHtml(s) {
-        return s.replace(/[&<>"']/g, function (c) {
-          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-        });
-      }
     })();
   </script>
 </body>
