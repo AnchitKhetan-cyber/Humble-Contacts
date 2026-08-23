@@ -62,6 +62,10 @@ revisions built those; they were removed at the owner's request. The pre-existin
   into `ProfileScreen`.
 - `ui/profile/ProfileScreen.kt` — new **My Visiting Card** row in the ACCOUNT section + a live
   card preview (tappable → editor) with an **Edit card** button; imports `VisitingCardView`.
+- `ui/home/HomeScreen.kt` — a **My Visiting Card** showcase section (live card preview + Edit,
+  tappable → editor) between the stats row and Recent Contacts, so the home screen promotes the
+  card instead of sitting empty. Loads the profile via `ProfileRepository` on resume; takes a new
+  `onNavigateToVisitingCard` callback wired in `AppNavGraph`.
 
 **Strings**
 - `res/values/strings.xml` — new user-facing card strings (no hardcoded UI text).

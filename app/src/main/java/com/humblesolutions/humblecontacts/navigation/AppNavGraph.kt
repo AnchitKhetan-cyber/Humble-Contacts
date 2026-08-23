@@ -374,6 +374,7 @@ fun AppNavGraph(
                 onNavigateToContact  = { id -> navController.navigate(Routes.contactDetail(id)) },
                 onNavigateToScan     = { navController.navigate(Routes.SCAN) },
                 onNavigateToProfile  = { navController.navigate(Routes.PROFILE) },
+                onNavigateToVisitingCard = { navController.navigate(Routes.VISITING_CARD) },
                 onSearchClick        = { navController.navigate(Routes.CONTACTS) },
                 onQrCodeScanned = { raw ->
                     when {
