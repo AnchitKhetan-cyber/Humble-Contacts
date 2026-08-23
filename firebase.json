@@ -12,6 +12,9 @@
       "firebase.json",
       "**/node_modules/**"
     ],
+    "rewrites": [
+      { "source": "/add", "destination": "/add.html" }
+    ],
     "headers": [
       {
         "source": "/.well-known/assetlinks.json",
