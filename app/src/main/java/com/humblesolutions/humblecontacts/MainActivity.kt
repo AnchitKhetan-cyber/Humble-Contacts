@@ -81,8 +81,16 @@ class MainActivity : ComponentActivity() {
             }
 
             HumbleContactsTheme(darkTheme = darkMode) {
-                val deepLinkContactId = intent?.data
-                    ?.takeIf { it.host == CONTACT_LINK_HOST }
+                val linkData = intent?.data?.takeIf { it.host == CONTACT_LINK_HOST }
+
+                // Contact-save App Link (https://<host>/add?vcard=…): a card QR
+                // scanned by any camera/QR app opens here → prefilled Add Contact.
+                val deepLinkVCard = linkData
+                    ?.takeIf { it.path?.startsWith("/add") == true }
+                    ?.getQueryParameter("vcard")
+
+                val deepLinkContactId = linkData
+                    ?.takeIf { it.path?.startsWith("/contact/") == true }
                     ?.lastPathSegment
 
                 // Returning account-deletion confirmation link: stash the URL for
@@ -98,6 +106,7 @@ class MainActivity : ComponentActivity() {
 
                 val startDestination = when {
                     isDeletionLink -> Routes.DELETE_ACCOUNT
+                    !deepLinkVCard.isNullOrBlank() -> Routes.addContactWithVCard(deepLinkVCard)
                     deepLinkContactId != null -> Routes.contactDetail(deepLinkContactId)
                     else -> Routes.SPLASH
                 }
@@ -147,6 +156,13 @@ class MainActivity : ComponentActivity() {
             FirebaseAuth.getInstance().currentUser != null
         ) {
             PendingDeletionStore(this).emailLink = link
+            recreate()
+        }
+
+        // Contact-save App Link opened while the app is running: re-evaluate the
+        // start destination so it routes to prefilled Add Contact.
+        val data = intent.data
+        if (data?.host == CONTACT_LINK_HOST && data.path?.startsWith("/add") == true) {
             recreate()
         }
     }

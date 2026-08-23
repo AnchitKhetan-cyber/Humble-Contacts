@@ -53,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.net.Uri
+import com.humblesolutions.humblecontacts.MainActivity
 import com.humblesolutions.humblecontacts.data.model.UserProfile
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
 import com.humblesolutions.humblecontacts.utils.generateQrBitmap
@@ -105,8 +107,11 @@ fun profileVCard(profile: UserProfile): String {
  */
 fun qrContentFor(account: LinkedAccount): String {
     return when (account.title) {
-        // The value is already a full vCard; encode it verbatim.
-        "Contact" -> account.value
+        // The value is a full vCard. Wrap it in our https App Link so scanning it
+        // with ANY QR/camera app opens Humble Contacts (→ prefilled Add Contact)
+        // instead of the OS treating a raw vCard as a .vcf. Requires the host to
+        // serve /.well-known/assetlinks.json (docs/applink-contact-domain-setup.md).
+        "Contact" -> "https://${MainActivity.CONTACT_LINK_HOST}/add?vcard=${Uri.encode(account.value)}"
         "Phone" -> "tel:${account.value}"
         "Email" -> "mailto:${account.value}"
         "WhatsApp" -> {

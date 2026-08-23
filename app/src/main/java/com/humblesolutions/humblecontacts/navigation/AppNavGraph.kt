@@ -2,6 +2,7 @@ package com.humblesolutions.humblecontacts.navigation
 
 import android.content.Intent
 import android.net.Uri
+import com.humblesolutions.humblecontacts.MainActivity
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -385,6 +386,18 @@ fun AppNavGraph(
 
                         raw.startsWith("BEGIN:VCARD") -> {
                             navController.navigate(Routes.addContactWithVCard(raw))
+                        }
+
+                        // Our contact App Link: https://<host>/add?vcard=<vCard>.
+                        // Route straight to Add Contact instead of the browser-open
+                        // confirmation used for arbitrary links.
+                        raw.startsWith("https://${MainActivity.CONTACT_LINK_HOST}/add") -> {
+                            val vcard = Uri.parse(raw).getQueryParameter("vcard")
+                            if (!vcard.isNullOrBlank()) {
+                                navController.navigate(Routes.addContactWithVCard(vcard))
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.qr_unreadable), Toast.LENGTH_SHORT).show()
+                            }
                         }
 
                         // ── Handle your JSON contact QR ──────────────────────────────
