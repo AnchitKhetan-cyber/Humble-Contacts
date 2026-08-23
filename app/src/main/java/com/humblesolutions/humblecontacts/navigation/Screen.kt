@@ -27,6 +27,8 @@ object Routes {
 
     const val EDIT_PROFILE = "edit_profile"
 
+    const val VISITING_CARD = "visiting_card"
+
     const val PHONE_INPUT = "phone_input"
     const val OTP_VERIFY  = "otp_verify"
 

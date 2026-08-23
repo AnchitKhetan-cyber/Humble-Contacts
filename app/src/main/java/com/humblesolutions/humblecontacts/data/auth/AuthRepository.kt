@@ -380,12 +380,18 @@ class AuthRepository {
                         "totalEvents" to 0
                     ),
 
+                    // Visiting card (#64). Keys mirror VisitingCard exactly;
+                    // `cardTheme` is the persisted key for the template (kept for
+                    // backward compat via @PropertyName on VisitingCard.template).
                     "visitingCard" to hashMapOf(
+                        "cardTheme" to "",
+                        "accentColor" to "",
+                        "background" to "",
+                        "fontStyle" to "",
                         "headline" to "",
                         "bio" to "",
                         "websiteUrl" to "",
-                        "portfolioUrl" to "",
-                        "cardTheme" to ""
+                        "portfolioUrl" to ""
                     )
                 )
             ).await()

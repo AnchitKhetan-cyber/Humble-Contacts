@@ -6,6 +6,7 @@ import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.humblesolutions.humblecontacts.data.model.ShareSettings
 import com.humblesolutions.humblecontacts.data.model.UserProfile
+import com.humblesolutions.humblecontacts.data.model.VisitingCard
 import kotlinx.coroutines.tasks.await
 
 class ProfileRepository {
@@ -54,6 +55,17 @@ class ProfileRepository {
             mapOf(
                 "shareSettings" to shareSettings,
                 "shareSettingsInitialized" to true,
+                "updatedAt" to Timestamp.now()
+            )
+        ).await()
+    }
+
+    /** Persists the user's digital visiting card (#64). */
+    suspend fun updateVisitingCard(card: VisitingCard) {
+        val uid = auth.currentUser?.uid ?: return
+        usersCollection.document(uid).update(
+            mapOf(
+                "visitingCard" to card,
                 "updatedAt" to Timestamp.now()
             )
         ).await()

@@ -92,8 +92,18 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="links.humblecontacts.app"
+                    android:host="humble-contacts-2e9c9.web.app"
                     android:pathPrefix="/contact/" />
+                <!--
+                  Contact-save App Link: https://<host>/add?vcard=<vCard>.
+                  Scanning this with any QR/camera app opens Humble Contacts (once the
+                  host serves /.well-known/assetlinks.json) and prefills Add Contact,
+                  instead of the OS treating a raw vCard as a .vcf.
+                -->
+                <data
+                    android:scheme="https"
+                    android:host="humble-contacts-2e9c9.web.app"
+                    android:pathPrefix="/add" />
             </intent-filter>
 
             <!--

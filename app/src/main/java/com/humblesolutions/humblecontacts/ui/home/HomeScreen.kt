@@ -23,8 +23,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,8 +38,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.humblesolutions.humblecontacts.data.model.Contact
+import com.humblesolutions.humblecontacts.data.model.UserProfile
+import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
 import com.humblesolutions.humblecontacts.ui.components.NavTab
+import com.humblesolutions.humblecontacts.ui.profile.card.VisitingCardView
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
@@ -56,6 +63,7 @@ fun HomeScreen(
     onNavigateToScan:      () -> Unit = {},
     onNavigateToNfc:       () -> Unit = {},
     onNavigateToProfile:   () -> Unit = {},
+    onNavigateToVisitingCard: () -> Unit = {},
     onSearchClick:         () -> Unit = {},
     onQrCodeScanned:       (String) -> Unit = {}
 ) {
@@ -65,6 +73,16 @@ fun HomeScreen(
     val recentContacts = viewModel.recentContacts
 
     val context = LocalContext.current
+
+    // The signed-in user's profile, for the visiting-card showcase (#64). Reloaded
+    // on every resume so edits made in the card editor show up on return.
+    var userProfile by remember { mutableStateOf<UserProfile?>(null) }
+    val profileScope = rememberCoroutineScope()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        profileScope.launch {
+            userProfile = ProfileRepository().getCurrentUserProfile()
+        }
+    }
 
     // QR scanner launcher (zxing-android-embedded)
     val qrScanLauncher = rememberLauncherForActivityResult(
@@ -298,6 +316,40 @@ fun HomeScreen(
             }
 
             Spacer(Modifier.height(28.dp))
+
+            // ── My Visiting Card (#64) ───────────────────────────────────────
+            userProfile?.let { profile ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "My Visiting Card",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    TextButton(onClick = onNavigateToVisitingCard) {
+                        Text("Edit", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    VisitingCardView(
+                        profile = profile,
+                        card = profile.visitingCard,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToVisitingCard() }
+                    )
+                }
+
+                Spacer(Modifier.height(28.dp))
+            }
 
             // ── Recent Contacts ──────────────────────────────────────────────
             Row(

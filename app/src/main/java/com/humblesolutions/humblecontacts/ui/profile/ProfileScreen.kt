@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Whatsapp
 import androidx.compose.material.icons.outlined.*
@@ -42,6 +43,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import com.humblesolutions.humblecontacts.data.model.UserProfile
 import com.humblesolutions.humblecontacts.data.model.ShareSettings
 import com.humblesolutions.humblecontacts.data.repository.ProfileRepository
+import com.humblesolutions.humblecontacts.ui.profile.card.VisitingCardView
 import kotlinx.coroutines.launch
 import com.humblesolutions.humblecontacts.ui.home.HomeViewModel
 import com.humblesolutions.humblecontacts.ui.components.BottomNavBar
@@ -63,6 +65,7 @@ fun ProfileScreen(
     onNavigateToDeleteAccount: () -> Unit = {},
     onNavigateToEditProfile: () -> Unit = {},
     onNavigateToLinkedAccounts: () -> Unit = {},
+    onNavigateToVisitingCard: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
 
@@ -123,6 +126,8 @@ fun ProfileScreen(
         qrAccounts.clear()
         if (profile != null) {
             val share = profile.shareSettings
+            // Full-contact vCard QR: scanning it in Humble Contacts saves the person.
+            qrAccounts.add(LinkedAccount("Contact", profileVCard(profile)))
             if (share.sharePhone && profile.phone.isNotBlank()) {
                 val full = "${profile.countryCode}${profile.phone}"
                 qrAccounts.add(LinkedAccount("Phone", full))
@@ -246,6 +251,38 @@ fun ProfileScreen(
                 }
             }
 
+            // ── Visiting card preview (#64) ───────────────────────────────────
+            userProfile?.let { profile ->
+                Spacer(Modifier.height(20.dp))
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Text(
+                        "MY VISITING CARD",
+                        fontSize      = 12.sp,
+                        fontWeight    = FontWeight.SemiBold,
+                        color         = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 0.8.sp
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    VisitingCardView(
+                        profile = profile,
+                        card = profile.visitingCard,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onNavigateToVisitingCard)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = onNavigateToVisitingCard,
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Edit card", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+
             // ── QR icon cards ─────────────────────────────────────────────────
             if (qrAccounts.isNotEmpty()) {
                 Spacer(Modifier.height(20.dp))
@@ -284,6 +321,15 @@ fun ProfileScreen(
                         title = "Edit Profile",
                         subtitle = "Update your information",
                         onClick = onNavigateToEditProfile
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    SettingsRow(
+                        icon = Icons.Outlined.Badge,
+                        iconBg = MaterialTheme.colorScheme.secondaryContainer,
+                        iconTint = MaterialTheme.colorScheme.secondary,
+                        title = "My Visiting Card",
+                        subtitle = "Create and share your digital card",
+                        onClick = onNavigateToVisitingCard
                     )
                 }
 
@@ -518,6 +564,7 @@ private fun QrIconCard(
     onClick: () -> Unit
 ) {
     val (icon, bg, tint) = when (account.title) {
+        "Contact"  -> Triple(Icons.Default.Person,        Color(0xFFEDE7F6), Color(0xFF5E35B1))
         "Phone"    -> Triple(Icons.Default.Phone,         Color(0xFFE8F5E9), Color(0xFF2E7D32))
         "Email"    -> Triple(Icons.Default.Email,        Color(0xFFE3F2FD), Color(0xFF1565C0))
         "WhatsApp" -> Triple(Icons.Default.Whatsapp, Color(0xFFE8F5E9), Color(0xFF1B5E20))
