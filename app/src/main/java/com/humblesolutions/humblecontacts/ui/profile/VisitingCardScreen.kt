@@ -50,9 +50,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -78,6 +80,9 @@ fun VisitingCardScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    // Moves focus between the card's text fields on "Next" and dismisses the
+    // keyboard on "Done".
+    val focusManager = LocalFocusManager.current
 
     // One-shot feedback for save results.
     LaunchedEffect(state.saveSuccess) {
@@ -252,7 +257,8 @@ fun VisitingCardScreen(
                         onValueChange = viewModel::onHeadlineChange,
                         placeholder = stringResource(R.string.card_headline_hint),
                         leadingIcon = Icons.Outlined.WorkOutline,
-                        imeAction = ImeAction.Next
+                        imeAction = ImeAction.Next,
+                        onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
                     )
                     Spacer(Modifier.height(12.dp))
                     HumbleInputField(
@@ -272,7 +278,8 @@ fun VisitingCardScreen(
                         placeholder = stringResource(R.string.card_website_hint),
                         leadingIcon = Icons.Outlined.Language,
                         keyboardType = KeyboardType.Uri,
-                        imeAction = ImeAction.Next
+                        imeAction = ImeAction.Next,
+                        onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
                     )
                     Spacer(Modifier.height(12.dp))
                     HumbleInputField(
@@ -281,7 +288,8 @@ fun VisitingCardScreen(
                         placeholder = stringResource(R.string.card_portfolio_hint),
                         leadingIcon = Icons.Outlined.WorkOutline,
                         keyboardType = KeyboardType.Uri,
-                        imeAction = ImeAction.Done
+                        imeAction = ImeAction.Done,
+                        onImeAction = { focusManager.clearFocus() }
                     )
 
                     Spacer(Modifier.height(24.dp))
