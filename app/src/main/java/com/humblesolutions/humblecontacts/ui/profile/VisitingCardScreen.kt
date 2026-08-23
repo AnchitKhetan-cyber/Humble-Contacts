@@ -92,6 +92,8 @@ fun VisitingCardScreen(
         if (state.saveSuccess) {
             Toast.makeText(context, context.getString(R.string.card_saved), Toast.LENGTH_SHORT).show()
             viewModel.consumeSaveSuccess()
+            // Return to the previous screen once the card is saved.
+            onBack()
         }
     }
     LaunchedEffect(state.saveError) {
