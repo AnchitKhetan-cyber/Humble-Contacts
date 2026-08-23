@@ -260,7 +260,7 @@ fun VisitingCardScreen(
                         placeholder = stringResource(R.string.card_headline_hint),
                         leadingIcon = Icons.Outlined.WorkOutline,
                         imeAction = ImeAction.Next,
-                        onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
+                        onImeAction = { focusManager.moveFocus(FocusDirection.Next) }
                     )
                     Spacer(Modifier.height(12.dp))
                     HumbleInputField(
@@ -281,7 +281,7 @@ fun VisitingCardScreen(
                         leadingIcon = Icons.Outlined.Language,
                         keyboardType = KeyboardType.Uri,
                         imeAction = ImeAction.Next,
-                        onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
+                        onImeAction = { focusManager.moveFocus(FocusDirection.Next) }
                     )
                     Spacer(Modifier.height(12.dp))
                     HumbleInputField(
