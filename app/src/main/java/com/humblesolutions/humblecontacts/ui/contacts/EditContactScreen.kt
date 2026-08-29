@@ -1,6 +1,7 @@
 package com.humblesolutions.humblecontacts.ui.contacts
 
 import android.widget.Toast
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +26,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,6 +59,7 @@ fun EditContactScreen(
 ) {
     val viewModel: ContactViewModel = viewModel()
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     // The contact being edited (null until the realtime list has loaded it).
     var original by remember { mutableStateOf<Contact?>(null) }
@@ -153,6 +157,12 @@ fun EditContactScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                // Tap on empty space clears focus and dismisses the keyboard.
+                // Interactive children consume their own taps, so this only
+                // fires for taps outside a field/chip/button.
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                }
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

@@ -2,6 +2,7 @@ package com.humblesolutions.humblecontacts.ui.contacts
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
@@ -20,7 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,6 +48,7 @@ fun ContactsScreen(
     onNavigateToAdd:      () -> Unit = {}
 ) {
     val viewModel: ContactViewModel = viewModel()
+    val focusManager = LocalFocusManager.current
 
     val filterTabs = listOf("All", "Favourites", "By Industry", "By Event", "By Date")
     // Chips that filter to a value the user picks from a dropdown.
@@ -70,6 +77,12 @@ fun ContactsScreen(
             total > 0 && lastVisible >= total - 5
         }
     }
+    // Scrolling the results is a "done typing" signal — drop focus so the
+    // keyboard gets out of the way of the list the user is now reading.
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) focusManager.clearFocus()
+    }
+
     LaunchedEffect(shouldLoadMore) {
         // Only auto-page the full list. When a search/filter is active the view is
         // page-scoped by design (#25 decision), so we don't keep loading pages to
@@ -109,6 +122,12 @@ fun ContactsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                // Tap on empty space clears focus and dismisses the keyboard.
+                // Interactive children consume their own taps, so this only
+                // fires for taps outside a field/chip/card.
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                }
         ) {
 
             // ── Header ───────────────────────────────────────────────────────
@@ -156,6 +175,10 @@ fun ContactsScreen(
                     unfocusedBorderColor    = Color.Transparent,
                     focusedBorderColor      = MaterialTheme.colorScheme.primary,
                 ),
+                // Filtering is live, so "Search" just confirms and closes the
+                // keyboard rather than kicking off a query.
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                 singleLine = true
             )
 
